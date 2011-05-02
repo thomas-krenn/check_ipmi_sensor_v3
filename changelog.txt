@@ -6,6 +6,7 @@ Version 3.0 20110501
   * The code rewritten using the Perl.
   * Added long variant options.
   * Removed trailing zeros after the decimal point in perfdata.
+  * Output format of the ipmimonitoring version 0.8.x and up supported.
 
 Version 2.2 20110127
   * Added -b option to enable backward compatibility with FreeIPMI 0.5.*.

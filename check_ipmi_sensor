@@ -40,12 +40,20 @@ use utils qw(%ERRORS);
 our $IPMICOMMAND="/usr/sbin/ipmimonitoring";
 
 our %hdrmap = (
-	'Record_ID'		=> 'id',
+	'Record_ID'		=> 'id',	# FreeIPMI ...,0.7.x
+	'Record ID'		=> 'id',	# FreeIPMI 0.8.x,... with --legacy-output
+	'ID'			=> 'id',	# FreeIPMI 0.8.x
 	'Sensor Name'		=> 'name',
+	'Name'			=> 'name',	# FreeIPMI 0.8.x
 	'Sensor Group'		=> 'type',
+	'Type'			=> 'type',	# FreeIPMI 0.8.x
 	'Monitoring Status'	=> 'state',
+	'State'			=> 'state',	# FreeIPMI 0.8.x
 	'Sensor Units'		=> 'units',
+	'Units'			=> 'units',	# FreeIPMI 0.8.x
 	'Sensor Reading'	=> 'reading',
+	'Reading'		=> 'reading',	# FreeIPMI 0.8.x
+	'Event'			=> 'event',	# FreeIPMI 0.8.x
     );
 
 sub get_version
@@ -125,14 +133,12 @@ Options:
        show version information
 
 When you use the plugin with newer FreeIPMI versions (version 0.8.* and newer)
-you need to set the --legacy-ouput option to get a parsable output. Further you
-can use --interpret-oem-data to interpret OEM data (available since FreeIPMI
-version 0.8.*)
+you can use --entity-sensor-names to identify multiple sensor instances,
+or --interpret-oem-data to interpret OEM data.
 You can set these options in your FreeIPMI configuration file:
-  ipmimonitoring-legacy-output on
   ipmi-sensors-interpret-oem-data on
 or you provide
-  -O '--legacy-output --interpret-oem-data'
+  -O '--interpret-oem-data --entity-sensor-names'
 to the plugin.
 
 Further information about this plugin can be found in the Thomas Krenn Wiki
@@ -308,7 +314,7 @@ MAIN: {
 	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
 	foreach my $row ( @ipmioutput2 )
 	{
-	    if ( $row->{'state'} ne 'Nominal' )
+	    if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' )
 	    {
 		$exit = 1 if $exit < 1;
 		$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
