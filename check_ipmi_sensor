@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/perl
 # check_ipmi_sensor: Nagios/Icinga plugin to check IPMI sensors
 #
 # Copyright (C) 2009-2011 Thomas-Krenn.AG (written by Werner Fischer),
@@ -20,40 +20,67 @@
 ################################################################################
 # The following guides provide helpful information if you want to extend this
 # script:
-#   http://tldp.org/LDP/abs/html/ (Advanced Bash-Scripting Guide)
-#   http://www.gnu.org/manual/gawk/ (Gawk: Effective AWK Programming)
-#   http://de.wikibooks.org/wiki/Awk (awk Wikibook, in German)
 #   http://nagios.sourceforge.net/docs/3_0/customobjectvars.html (hints on
 #                  custom object variables)
 #   http://nagiosplug.sourceforge.net/developer-guidelines.html (plug-in
 #                  development guidelines)
 #   http://nagios.sourceforge.net/docs/3_0/pluginapi.html (plugin API)
 ################################################################################
+use strict;
+use warnings;
+use Getopt::Long qw(:config no_ignore_case);
+use IPC::Run qw( run );
+
+use lib '/usr/lib/nagios/plugins';
+use utils qw(%ERRORS);
+
 
 ################################################################################
 # set ipmimonitoring path
-IPMICOMMAND="/usr/sbin/ipmimonitoring"
+our $IPMICOMMAND="/usr/sbin/ipmimonitoring";
 
-################################################################################
-# set text variables
-version_text="check_ipmi_sensor version 2.2 20110127
+our %hdrmap = (
+	'Record_ID'		=> 'id',
+	'Sensor Name'		=> 'name',
+	'Sensor Group'		=> 'type',
+	'Monitoring Status'	=> 'state',
+	'Sensor Units'		=> 'units',
+	'Sensor Reading'	=> 'reading',
+    );
+
+sub get_version
+{
+    return <<EOT;
+check_ipmi_sensor version 3.0 2011-05-01
 Copyright (C) 2009-2011 Thomas-Krenn.AG (written by Werner Fischer)
-Current updates available at http://www.thomas-krenn.com/en/oss/ipmi-plugin/"
-usage_text="Usage:
+Current updates available at http://www.thomas-krenn.com/en/oss/ipmi-plugin/
+EOT
+}
+
+sub get_usage
+{
+    return <<EOT;
+Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
   [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-v 1|2|3]
-  [-h] [-V]"
-help_text="Options:
+  [-h] [-V]
+EOT
+}
+
+sub get_help
+{
+    return <<EOT;
+Options:
   -H <hostname>
        hostname or IP of the IPMI interface.
-       For \"-H localhost\" the Nagios/Icinga user must be allowed to execute
+       For "-H localhost" the Nagios/Icinga user must be allowed to execute
        ipmimonitoring with root privileges via sudo (ipmimonitoring must be
        able to access the IPMI devices via the IPMI system interface).
   [-f <FreeIPMI config file>]
        path to the FreeIPMI configuration file.
        Only neccessary for communication via network.
-       Not neccessary for access via IPMI system interface (\"-H localhost\").
+       Not neccessary for access via IPMI system interface ("-H localhost").
        It should contain IPMI username, IPMI password, and IPMI privilege-level,
        for example:
          username monitoring
@@ -115,253 +142,213 @@ http://www.thomas-krenn.com/de/wiki/IPMI_Sensor_Monitoring_Plugin
 Send email to the IPMI-plugin-user mailing list if you have questions regarding
 use of this software, to submit patches, or suggest improvements.
 The mailing list is available at http://lists.thomas-krenn.com/
-"
-abort_text=""
-################################################################################
-# read parameters 
-# * uses getopts, see http://tldp.org/LDP/abs/html/internal.html#GETOPTSX
-while getopts "H:f:U:P:L:O:bT:v:x:hV?" option
-do
-	case $option in
-		H)	IPMI_HOST=$OPTARG;;
-		f)	IPMI_CONFIG_FILE=$OPTARG;;
-		U)	IPMI_USER=$OPTARG;;
-		P)	IPMI_PASSWORD=$OPTARG;;
-		L)	IPMI_PRIVILEGE_LEVEL=$OPTARG;;
-		O)	FREEIPMI_OPTIONS=$OPTARG;;
-		b)	FREEIPMI_BACKWARD_COMPATIBILITY=1;;
-		T)	IPMI_SENSOR_TYPE=$OPTARG;;
-		v)	VERBOSITY=$OPTARG;;
-		x)	if [ -z "$IPMI_XLIST" ]; then
-				IPMI_XLIST="$OPTARG"
-			else
-				IPMI_XLIST="${IPMI_XLIST};$OPTARG"
-			fi
-			;;
-		h)	echo "$version_text"
-			echo
-			echo "$usage_text"
-			echo
-			echo "$help_text"
-		  	exit 0;;
-		V)	echo "$version_text"
-		  	exit 0;;
-		\?)	echo "$usage_text"
-		  	exit 3;;
-	esac
-done
+EOT
+}
+
+sub usage
+{
+    my ($arg) = @_;
+    my ($exitcode);
+    if ( defined $arg )
+    {
+	if ( $arg =~ m/^\d+$/ )
+	{
+	    $exitcode = $arg;
+	}
+	else
+	{
+	    print STDERR $arg, "\n";
+	    $exitcode = 1;
+	}
+    }
+    print STDERR get_usage();
+    exit($exitcode) if defined $exitcode;
+}
+
+our $verbosity = 0;
+
+MAIN: {
+    $| = 1;
+    my ($show_help, $show_version);
+    my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file);
+    my (@freeipmi_options, $freeipmi_compat);
+    my (@ipmi_sensor_types, @ipmi_xlist);
+
+    my @ARGV_SAVE = @ARGV;
+    usage(1) unless GetOptions(
+		'v|verbosity=i'		=> \$verbosity,
+		'h|help'	    	=> \$show_help,
+		'V|version'	    	=> \$show_version,
+		'H|host=s'	    	=> \$ipmi_host,
+		'U|user=s'	    	=> \$ipmi_user,
+		'P|password=s'  	=> \$ipmi_password,
+		'L|privilege-level=s'	=> \$ipmi_privilege_level,
+		'f|config-file=s'	=> \$ipmi_config_file,
+		'O|options=s'		=> \@freeipmi_options,
+		'b|compat'		=> \$freeipmi_compat,
+		'T|sensor-types=s'	=> \@ipmi_sensor_types,
+		'x|exclude=s'		=> \@ipmi_xlist,
+	    );
+    @freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
+    @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
+    @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
+    if ( $show_help )
+    {
+	print STDERR get_version();
+	print STDERR "\n";
+	print STDERR get_usage();
+	print STDERR "\n";
+	print STDERR get_help();
+	exit(0);
+    }
+    usage(1) if @ARGV;
+    if ( $show_version )
+    {
+	print STDERR get_version();
+	exit(0);
+    }
 
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
-if [ -z "$IPMI_HOST" ]; then abort_text="$abort_text -H <hostname>"
-else
-	if [ "$IPMI_HOST" == "localhost" ]; then
-		BASECOMMAND="sudo $IPMICOMMAND"
+    my @basecmd;
+    usage("Error: -H <hostname> missing.") unless defined $ipmi_host;
+    if ( $ipmi_host eq 'localhost' )
+    {
+	@basecmd = ('sudo', $IPMICOMMAND);
+    }
+    else
+    {
+	if ( defined $ipmi_config_file )
+	{
+	    @basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
+	}
+	elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level )
+	{
+	    @basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level)
+	}
 	else
-		if [ -n "$IPMI_CONFIG_FILE" ]; then
-			BASECOMMAND="$IPMICOMMAND -h $IPMI_HOST --config-file $IPMI_CONFIG_FILE"
-		elif [ -n "$IPMI_USER" -a -n "$IPMI_PASSWORD" -a -n "$IPMI_PRIVILEGE_LEVEL" ]; then
-			BASECOMMAND="$IPMICOMMAND -h $IPMI_HOST -u $IPMI_USER -p $IPMI_PASSWORD -l $IPMI_PRIVILEGE_LEVEL"
-		else 
-			abort_text="$abort_text -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>"; fi
-	fi
-fi
-if [ -n "$abort_text" ]; then
-	echo "Error:$abort_text missing."
-	echo "$usage_text"
-	exit 3
-fi
-if [ -n "$IPMI_SENSOR_TYPE" ]; then BASECOMMAND="$BASECOMMAND -g $IPMI_SENSOR_TYPE"; fi
-if [ -n "$FREEIPMI_OPTIONS" ]; then BASECOMMAND="$BASECOMMAND $FREEIPMI_OPTIONS"; fi
-if [ -n "$FREEIPMI_BACKWARD_COMPATIBILITY" ]; then
-	GET_STATUS="$BASECOMMAND"
-else
-	GET_STATUS="$BASECOMMAND --quiet-cache --sdr-cache-recreate"
-fi
+	{
+	    usage("Error: -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level> missing.");
+	}
+    }
+    push @basecmd, '-g', join(',', @ipmi_sensor_types) if @ipmi_sensor_types;
+    push @basecmd, @freeipmi_options if @freeipmi_options;
+    my @getstatus = @basecmd;
+    push @getstatus, '--quiet-cache', '--sdr-cache-recreate' unless defined $freeipmi_compat;
 
 ################################################################################
-# execute $GET_STATUS
-# * uses old-style backquote so the backslash retains its literal meaning except
-#   when followed by ‘$’, ‘`’, or ‘\’
-#   see http://www.gnu.org/software/bash/manual/bashref.html#Command-Substitution
-ipmioutput=`eval $GET_STATUS 2>&1`
-returncode=$?
+# execute @getstatus
+    my $ipmioutput;
+    run \@getstatus, '>&', \$ipmioutput;
+    my $returncode = $? >> 8;
 
 ################################################################################
 # print debug output when verbosity is set to 3 (-v 3)
-if [ "$VERBOSITY" = "3" ]
-then
-	ipmicommandversion=`eval $IPMICOMMAND -V 2>&1 | head -n 1`
-	echo "------------- begin of debug output (-v 3 is set): ------------"
-	echo "  script was executed with the following parameters:"
-	echo "    $0 $@"
-	echo "  ipmimonitoring version:"
-	echo "    $ipmicommandversion"
-	echo "  ipmimonitoring was executed with the following parameters:"
-	echo "    $GET_STATUS"
-	echo "  ipmimonitoring return code: $returncode"
-	echo "  output of ipmimonitoring:"
-	echo "$ipmioutput"
-	echo "--------------------- end of debug output ---------------------"
-fi
+    if ( $verbosity == 3 )
+    {
+	my $ipmicommandversion;
+	run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
+	chomp $ipmicommandversion;
+	print "------------- begin of debug output (-v 3 is set): ------------\n";
+	print "  script was executed with the following parameters:\n";
+	print "    $0 ", join(' ', @ARGV_SAVE), "\n";
+	print "  ipmimonitoring version:\n";
+	print "    $ipmicommandversion\n";
+	print "  ipmimonitoring was executed with the following parameters:\n";
+	print "    ", join(' ', @getstatus), "\n";
+	print "  ipmimonitoring return code: $returncode\n";
+	print "  output of ipmimonitoring:\n";
+	print "$ipmioutput\n";
+	print "--------------------- end of debug output ---------------------\n";
+    }
 
 ################################################################################
 # generate main output
-if [ $returncode != 0 ]
-then
-	echo "$ipmioutput"
-	echo "-> Execution of ipmimonitoring failed with return code $returncode."
-	echo "-> ipmimonitoring was executed with the following parameters:"
-        echo "   $GET_STATUS"
-	exit 3
-else
-	if [ -n "$IPMI_SENSOR_TYPE" ]; then
-		echo -n "Sensor Type '$IPMI_SENSOR_TYPE' Status: ";
-	else
-		echo -n "IPMI Status: ";
-        fi
-	echo "$ipmioutput" | gawk -v verbosity=$VERBOSITY -v xlist="$IPMI_XLIST" -F '|' '
-################################################################################
-# * BEGIN rule is executed once only, before the first input record is read
-#   see http://www.gnu.org/manual/gawk/html_node/Using-BEGIN_002fEND.html
-# * we initialize variables here
-BEGIN {
-	EXIT=0
-	number_of_numerical_records=0
-	w_sensors=""
-	split(xlist,xl_array,";")
-}
-
-################################################################################
-# * the "$4 !~ /Monitoring Status/" pattern below is used to omit the header
-#   output of ipmimonitoring
-#   see http://www.gnu.org/manual/gawk/html_node/Regexp-Usage.html
-# * we fill the following arrays with data here:
-#   - arrays containing all sensors:  
-#     - sensor_id[] .......... contains the id of the sensor, e.g. "1"
-#     - sensor_name[] ........ contains the name of the sensor, e.g. "Fan 1"
-#     - sensor_status[] ...... contains the status of the sensor, e.g. "Nominal"
-#     - sensor_units[] ....... contains the units of the sensor, e.g. "RPM"
-#     - sensor_reading[] ..... contains the sensor reading , e.g. "5719.000"
-#   - arrays containing only numerical sensors (for performance data)
-#     - n_record_name[] ...... contains the name of the sensor, e.g. "Fan 1"
-#     - n_record_value[] ..... contains the numerical reading, e.g. "5719.000"
-$4 !~ /Monitoring Status/ {
-	########################################################################
-	# Remove extra spaces
-	gsub(/ +$/,"",$1)
-	gsub(/^ +/,"",$2)
-	gsub(/ +$/,"",$2)
-	gsub(/^ +/,"",$4)
-	gsub(/ +$/,"",$4)
-	gsub(/^ +/,"",$5)
-	gsub(/ +$/,"",$5)
-	gsub(/^ +/,"",$6)
-	gsub(/ +$/,"",$6)
-
-	sensor_id[NR]=$1
-	sensor_name[NR]=$2
-	# sensor_type[NR]=$3 (currently not used)
-	sensor_status[NR]=$4
-	sensor_units[NR]=$5
-	sensor_reading[NR]=$6
-
-	########################################################################
-	# Omit this sensor if the sensor is included in the list of sensors to 
-	# exclude
-	for (ind in xl_array)
+    if ( $returncode != 0 )
+    {
+	print "$ipmioutput\n";
+	print "-> Execution of ipmimonitoring failed with return code $returncode.\n";
+	print "-> ipmimonitoring was executed with the following parameters:\n";
+        print "   ", join(' ', @getstatus), "\n";
+	exit(1);
+    }
+    else
+    {
+	if ( @ipmi_sensor_types )
 	{
- 		if (sensor_id[NR] == xl_array[ind]) next 
-	}
-	########################################################################
-	# * set EXIT variable to 1 if a sensor is not "ok" or "ns"
-	# * also build contents of w_sensors variable (sensors with status not
-	#   ok) in this case
-	if (sensor_status[NR] != "Nominal")
-	{
-		if (EXIT < 1) EXIT=1
-		if (EXIT < 2 && sensor_status[NR] != "Warning" ) EXIT=2 
-		if (verbosity>0)
-		{
-			if (w_sensors == "")
-				w_sensors=sensor_name[NR]" = "sensor_status[NR]" ("sensor_reading[NR]")"
-			else
-				w_sensors=w_sensors", "sensor_name[NR]" = "sensor_status[NR]" ("sensor_reading[NR]")"
-		}
-		else
-		{
-			if (w_sensors == "")
-				w_sensors=sensor_name[NR]" = "sensor_status[NR]
-			else
-				w_sensors=w_sensors", "sensor_name[NR]" = "sensor_status[NR]
-		}
-	}
-
-	if (sensor_units[NR] != "N/A")
-	{
-		number_of_numerical_records++
-		n_record_name[number_of_numerical_records]=sensor_name[NR]
-		n_record_value[number_of_numerical_records]=sensor_reading[NR]
-	}
-}
-
-################################################################################
-# * END rule is executed once only, after all the input is read
-#   see http://www.gnu.org/manual/gawk/html_node/Using-BEGIN_002fEND.html
-# * we print the data which has been collected above in this part below
-END {
-	########################################################################
-	# * build perfdata string (variable pstring) using quotes
-	#   see http://www.gnu.org/manual/gawk/html_node/Quoting.html
-	while(j<number_of_numerical_records) {
-		j++
-		pstring=pstring"\47"n_record_name[j]"\47="n_record_value[j]" "
-	}
-
-	########################################################################
-	# * print status message (first text output line)
-	if (EXIT==0)
-	{
-		if (number_of_numerical_records>0)
-			print "OK | "pstring
-		else
-			print "OK"
+	    print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
 	}
 	else
 	{
-		if (EXIT==1)
-		{
-			if (number_of_numerical_records>0)
-				print "Warning ["w_sensors"] | "pstring
-			else
-				print "Warning ["w_sensors"]"
-		}
-		else
-		{
-			if (number_of_numerical_records>0)
-				print "Critical ["w_sensors"] | "pstring
-			else
-				print "Critical ["w_sensors"]"
-		}
+	    print "IPMI Status: ";
 	}
-
-	########################################################################
-	# * print additional text lines (multi-line output) for verbosity > 1
-	if (verbosity>1)
+	my @ipmioutput = split('\n', $ipmioutput);
+	@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
+	my $header = shift @ipmioutput;
+	my %header;
+	for(my $i = 0; $i < @$header; $i++)
 	{
-		while(i<FNR)
-		{
-			i++
-			exclude="false"
-		        for (counter in xl_array)
-                		if (sensor_id[i] == xl_array[counter]) exclude="true"
-			########################################################
-			# "i > 1" is necessary to omit the header output line
-			if (i > 1 && exclude == "false")
-				print sensor_name[i],"=",sensor_reading[i],"(Status:",sensor_status[i]")"
-		}
+	    $header{$hdrmap{$header->[$i]}} = $i;
 	}
-	exit EXIT
-}
-'
-fi
+	my @ipmioutput2;
+	foreach my $row ( @ipmioutput )
+	{
+	    my %row;
+	    while ( my ($key, $index) = each %header )
+	    {
+		$row{$key} = $row->[$index];
+	    }
+	    push @ipmioutput2, \%row;
+	}
+	my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
+	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+	my $exit = 0;
+	my $w_sensors = '';
+	my $perf;
+	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+	foreach my $row ( @ipmioutput2 )
+	{
+	    if ( $row->{'state'} ne 'Nominal' )
+	    {
+		$exit = 1 if $exit < 1;
+		$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
+		$w_sensors .= ", " unless $w_sensors eq '';
+		$w_sensors .= "$row->{'name'} = $row->{'state'}";
+		$w_sensors .= " ($row->{'reading'})" if $verbosity > 0;
+	    }
+	    if ( $row->{'units'} ne 'N/A' )
+	    {
+		my $val = $row->{'reading'};
+		$val =~ s/(\.[0-9]*?)0+$/$1/;
+		$val =~ s/\.$//;
+		$perf .= qq|'$row->{'name'}'=$val |;
+	    }
+	}
+	$perf = substr($perf, 0, -1);
+	if ( $exit == 0 )
+	{
+	    print "OK";
+	}
+	elsif ( $exit == 1 )
+	{
+	    print "Warning [$w_sensors]";
+	}
+	else
+	{
+	    print "Critical [$w_sensors]";
+	}
+	print " | ", $perf if $perf ne '';
+	print "\n";
+	
+	if ( $verbosity > 1 )
+	{
+	    foreach my $row (@ipmioutput2)
+	    {
+		print "$row->{'name'}=$row->{'reading'} (Status: $row->{'state'})\n";
+	    }
+	}
+	exit $exit;
+    }
+};
+
+# vim:ai:sw=4:sts=4:
