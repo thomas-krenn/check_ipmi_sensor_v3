@@ -35,20 +35,25 @@ use lib '/usr/lib/nagios/plugins';
 use utils qw(%ERRORS);
 
 our $missing_command_text = "";
+our $abort_text ="";
 ################################################################################
 # set ipmimonitoring path
-our $IPMICOMMAND="/usr/sbin/ipmimonitoring";
-if (-x $IPMICOMMAND){}
+our $IPMICOMMAND ="";
+if(-x "/usr/sbin/ipmimonitoring"){
+	$IPMICOMMAND = "/usr/sbin/ipmimonitoring";
+}
 elsif (-x "/usr/bin/ipmimonitoring"){
 	$IPMICOMMAND = "/usr/bin/ipmimonitoring";
 }
 elsif (-x "/usr/local/sbin/ipmimonitoring"){
 	$IPMICOMMAND = "/usr/local/sbin/ipmimonitoring";
 }
-else{
-	$missing_command_text = 1;
+elsif (-x "/usr/local/bin/ipmimonitoring"){
+	$IPMICOMMAND = "/usr/local/bin/ipmimonitoring";
 }
-
+else{
+	$missing_command_text = " ipmimonitoring command not found";
+}
 
 #define entire hashes
 our %hdrmap = (
@@ -181,11 +186,11 @@ sub usage
 	}
 	else
 	{
-	    print STDERR $arg, "\n";
+	    print STDOUT $arg, "\n";
 	    $exitcode = 1;
 	}
     }
-    print STDERR get_usage();
+    print STDOUT get_usage();
     exit($exitcode) if defined $exitcode;
 }
 
@@ -198,129 +203,150 @@ MAIN: {
     my (@freeipmi_options, $freeipmi_compat);
     my (@ipmi_sensor_types, @ipmi_xlist);
 
-    my @ARGV_SAVE = @ARGV;
+    my @ARGV_SAVE = @ARGV;#keep args for verbose output
 
 	#before we read in command line arguments we check if ipmimonitoring is available
-	if( $missing_command_text eq 1){
-		print STDERR "ipmimonitoring command not found.\n";
-		exit(1);
+	if( $missing_command_text ne "" ){
+		print STDOUT $missing_command_text;
+		exit(3);
 	}
 
 	#read in command line arguments and init hash variables with the given values from argv
-    usage(1) unless GetOptions(
-		'v|verbosity=i'		=> \$verbosity,#the pipe states an list of possible option names
-		'h|help'	    	=> \$show_help,#the backslash inits the variable with the given argument
-		'V|version'	    	=> \$show_version,
-		'H|host=s'	    	=> \$ipmi_host,
+    if ( !( GetOptions(
+    	'H|host=s'	    	=> \$ipmi_host,#the pipe states an list of possible option names
+		'f|config-file=s'	=> \$ipmi_config_file,#the backslash inits the variable with the given argument
 		'U|user=s'	    	=> \$ipmi_user,
 		'P|password=s'  	=> \$ipmi_password,
 		'L|privilege-level=s'	=> \$ipmi_privilege_level,
-		'f|config-file=s'	=> \$ipmi_config_file,
 		'O|options=s'		=> \@freeipmi_options,
-		'b|compat'		=> \$freeipmi_compat,
+		'b|compat'			=> \$freeipmi_compat,
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
-		'x|exclude=s'		=> \@ipmi_xlist,
+		'v|verbosity'		=> \$verbosity,
+		'vv'				=> sub{$verbosity=2},
+		'vvv'				=> sub{$verbosity=3},#TODO Check verbosity levels
+		'x|exclude=s'		=> \@ipmi_xlist, #TODO Check if numbers instead of strings must be used
 		'o|outformat'		=> \$ipmi_outformat,
-	    );
+		'h|help'	    	=> 
+			sub{print STDOUT get_version();
+				print STDOUT "\n";
+				print STDOUT get_usage();
+				print STDOUT "\n";
+				print STDOUT get_help();
+				exit(0)
+			},	
+		'V|version'	    	=> 
+			sub{
+				print STDOUT get_version();
+				exit(0);
+			},
+		'usage|?'					=> #TODO Verify if usage is OK here
+			sub{print STDOUT get_usage();
+				exit(3);
+			}	
+	) )){
+		usage(1);#call usage if GetOptions failed
+	}
 	#\s defines any whitespace characters
 	#first join the list, then split it at whitespace ' '
+	#also cf. http://perldoc.perl.org/Getopt/Long.html#Options-with-multiple-values
     @freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
     @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
-    if ( $show_help )
-    {
-	print STDERR get_version();
-	print STDERR "\n";
-	print STDERR get_usage();
-	print STDERR "\n";
-	print STDERR get_help();
-	exit(0);
-    }
-    usage(1) if @ARGV;
-    if ( $show_version )
-    {
-	print STDERR get_version();
-	exit(0);
-    }
+    
+    usage(1) if @ARGV;#print usage if unknown arg list given
+   
 
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
-    my @basecmd;
-    usage("Error: -H <hostname> missing.") unless defined $ipmi_host;
-    if ( $ipmi_host eq 'localhost' )
-    {
-	@basecmd = ('sudo', $IPMICOMMAND);
+    my @basecmd; #variable for command to call ipmi
+    if( !$ipmi_host){
+    	$abort_text= $abort_text . " -H <hostname>"
     }
-    else
-    {
-	if ( defined $ipmi_config_file )
-	{
-	    @basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
-	}
-	elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level )
-	{
-	    @basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level)
-	}
-	else
-	{
-	    usage("Error: -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level> missing.");
-	}
+    else{
+    	if( $ipmi_host eq 'localhost' ){
+    		@basecmd = ('sudo', $IPMICOMMAND);
+    	}
+    	else{
+    		if($ipmi_config_file){
+    			@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
+    		}
+    		elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
+	    		@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level)
+			}
+			else{
+				$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
+			}
+    	}    		
     }
-	# , is the seperator in the new string
-    push @basecmd, '-g', join(',', @ipmi_sensor_types) if @ipmi_sensor_types;
-    push @basecmd, @freeipmi_options if @freeipmi_options;
+    
+    #TODO Insert missing command text here if desired
+    
+    if( $abort_text ne ""){
+    	print STDOUT "Error: " . $abort_text . " missing.";
+		print STDOUT get_usage();
+		exit(3);	
+    }
+    
+    # , is the seperator in the new string
+    if(@ipmi_sensor_types){
+    	 push @basecmd, '-g', join(',', @ipmi_sensor_types);    	 
+    }
+    if(@freeipmi_options){
+    	push @basecmd, @freeipmi_options;
+    }
+    
+    #keep original basecmd for later usage
     my @getstatus = @basecmd;
-	#if -b is defined we don't insert the caching options (backward compatibility)
-    push @getstatus, '--quiet-cache', '--sdr-cache-recreate' unless defined $freeipmi_compat;
+    
+    #if -b is not defined, caching options are used
+    if(!$freeipmi_compat){
+    	push @getstatus, '--quiet-cache', '--sdr-cache-recreate'
+    }    
 
 ################################################################################
-# execute @getstatus
-    my $ipmioutput;
-#redirect stdout and stderr to ipmioutput
+	#execute status command and redirect stdout and stderr to ipmioutput
+	my $ipmioutput;
     run \@getstatus, '>&', \$ipmioutput;
+    #the upper eight bits contain the error condition (exit code)
+    #see http://perldoc.perl.org/perlvar.html#Error-Variables
     my $returncode = $? >> 8;
 
 ################################################################################
 # print debug output when verbosity is set to 3 (-v 3)
-    if ( $verbosity == 3 )
-    {
-	my $ipmicommandversion;
-	run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
-	#remove trailing newline with chomp
-	chomp $ipmicommandversion;
-	print "------------- begin of debug output (-v 3 is set): ------------\n";
-	print "  script was executed with the following parameters:\n";
-	print "    $0 ", join(' ', @ARGV_SAVE), "\n";
-	print "  ipmimonitoring version:\n";
-	print "    $ipmicommandversion\n";
-	print "  ipmimonitoring was executed with the following parameters:\n";
-	print "    ", join(' ', @getstatus), "\n";
-	print "  ipmimonitoring return code: $returncode\n";
-	print "  output of ipmimonitoring:\n";
-	print "$ipmioutput\n";
-	print "--------------------- end of debug output ---------------------\n";
+    if ( $verbosity == 3 ){
+		my $ipmicommandversion;
+		run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
+		#remove trailing newline with chomp
+		chomp $ipmicommandversion;
+		print "------------- begin of debug output (-vvv is set): ------------\n";
+		print "  script was executed with the following parameters:\n";
+		print "    $0 ", join(' ', @ARGV_SAVE), "\n";
+		print "  ipmimonitoring version:\n";
+		print "    $ipmicommandversion\n";
+		print "  ipmimonitoring was executed with the following parameters:\n";
+		print "    ", join(' ', @getstatus), "\n";
+		print "  ipmimonitoring return code: $returncode\n";
+		print "  output of ipmimonitoring:\n";
+		print "$ipmioutput\n";
+		print "--------------------- end of debug output ---------------------\n";
     }
 
 ################################################################################
 # generate main output
-    if ( $returncode != 0 )
-    {
+    if ( $returncode != 0 ){
 		print "$ipmioutput\n";
 		print "-> Execution of ipmimonitoring failed with return code $returncode.\n";
 		print "-> ipmimonitoring was executed with the following parameters:\n";
         print "   ", join(' ', @getstatus), "\n";
-	exit(2);
+		exit(3);
     }
-
-   else
-    {
+    else{
 	#filter for given sensor types
 	if ( @ipmi_sensor_types )
 	{
 	    print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
 	}
-	else
-	{
+	else{
 	    print "IPMI Status: ";
 	}
 	#split at newlines
