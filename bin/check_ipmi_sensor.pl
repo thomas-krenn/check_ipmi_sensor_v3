@@ -309,7 +309,7 @@ MAIN: {
 		print "-> Execution of ipmimonitoring failed with return code $returncode.\n";
 		print "-> ipmimonitoring was executed with the following parameters:\n";
         print "   ", join(' ', @getstatus), "\n";
-		exit(1);
+	exit(2);
     }
 
    else
