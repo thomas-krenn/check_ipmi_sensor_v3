@@ -259,7 +259,7 @@ MAIN: {
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
     my @basecmd; #variable for command to call ipmi
-    if( !$ipmi_host){
+    if( !(defined $ipmi_host) ){
     	$abort_text= $abort_text . " -H <hostname>"
     }
     else{
@@ -267,7 +267,7 @@ MAIN: {
     		@basecmd = ('sudo', $IPMICOMMAND);
     	}
     	else{
-    		if($ipmi_config_file){
+    		if(defined $ipmi_config_file){
     			@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
     		}
     		elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
@@ -299,8 +299,8 @@ MAIN: {
     my @getstatus = @basecmd;
     
     #if -b is not defined, caching options are used
-    if(!$freeipmi_compat){
-    	push @getstatus, '--quiet-cache', '--sdr-cache-recreate'
+    if( !(defined $freeipmi_compat) ){
+    	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
     }    
 
 ################################################################################
@@ -312,7 +312,7 @@ MAIN: {
     my $returncode = $? >> 8;
 
 ################################################################################
-# print debug output when verbosity is set to 3 (-v 3)
+# print debug output when verbosity is set to 3 (-vvv)
     if ( $verbosity == 3 ){
 		my $ipmicommandversion;
 		run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
