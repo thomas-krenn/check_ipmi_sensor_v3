@@ -253,7 +253,7 @@ MAIN: {
     @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
     
-    usage(1) if @ARGV;#print usage if unknown arg list given
+    usage(1) if @ARGV;#print usage if unknown arg list is left
    
 
 ################################################################################
@@ -341,16 +341,15 @@ MAIN: {
 		exit(3);
     }
     else{
-	#filter for given sensor types
-	if ( @ipmi_sensor_types )
-	{
-	    print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
-	}
-	else{
-	    print "IPMI Status: ";
-	}
-	#split at newlines
-	my @ipmioutput = split('\n', $ipmioutput);
+		#print desired filter types
+		if ( @ipmi_sensor_types ){
+	    	print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
+		}
+		else{
+	    	print "IPMI Status: ";
+		}
+		#split at newlines, fetch array with lines of output
+		my @ipmioutput = split('\n', $ipmioutput);
 	
 	#remove leading and trailing whitespace characters, split at the pipe delimiter
 	@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
@@ -360,28 +359,34 @@ MAIN: {
 	my %header;
 	for(my $i = 0; $i < @$header; $i++)
 	{
+		#assigning %header with (key from hdrmap) => $i
+		#checking at which position in the header is which key
 	    $header{$hdrmap{$header->[$i]}} = $i;
 	}
+	
 	my @ipmioutput2;
-	foreach my $row ( @ipmioutput )
-	{
-	    my %row;
-	    while ( my ($key, $index) = each %header )
-	    {
-		$row{$key} = $row->[$index];
-	    }
-	    push @ipmioutput2, \%row;
+	foreach my $row ( @ipmioutput ){
+		my %row;
+		#fetch keys from header and assign existent values to row
+		#this maps the values from row(ipmioutput) to the header values
+		while ( my ($key, $index) = each %header ){
+			$row{$key} = $row->[$index];
+		}
+		push @ipmioutput2, \%row;
 	}
+	#create hash with sensor name an 1
 	my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
+	#filter out the desired sensor values
 	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+		
+	#TODO Check if we need to grep again?
+	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+	
 	my $exit = 0;
 	my $w_sensors = '';
 	my $perf;
-	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
-	foreach my $row ( @ipmioutput2 )
-	{
-	    if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' )
-	    {
+	foreach my $row ( @ipmioutput2 ){
+	    if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
 			$exit = 1 if $exit < 1;
 			$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
 			#don't insert a , the first time
@@ -389,8 +394,7 @@ MAIN: {
 			$w_sensors .= "$row->{'name'} = $row->{'state'}";
 			$w_sensors .= " ($row->{'reading'})" if $verbosity > 0;
 	    }
-	    if ( $row->{'units'} ne 'N/A' )
-	    {
+	    if ( $row->{'units'} ne 'N/A' ){
 			my $val = $row->{'reading'};
 			$val =~ s/(\.[0-9]*?)0+$/$1/;
 			$val =~ s/\.$//;
