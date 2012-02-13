@@ -20,6 +20,9 @@
 ################################################################################
 # The following guides provide helpful information if you want to extend this
 # script:
+#   http://tldp.org/LDP/abs/html/ (Advanced Bash-Scripting Guide)
+#   http://www.gnu.org/software/gawk/manual/ (Gawk: Effective AWK Programming)
+#   http://de.wikibooks.org/wiki/Awk (awk Wikibook, in German)
 #   http://nagios.sourceforge.net/docs/3_0/customobjectvars.html (hints on
 #                  custom object variables)
 #   http://nagiosplug.sourceforge.net/developer-guidelines.html (plug-in
@@ -34,45 +37,8 @@ use IPC::Run qw( run ); #interact with processes
 use lib '/usr/lib/nagios/plugins';
 use utils qw(%ERRORS);
 
-our $missing_command_text = "";
-our $abort_text ="";
 ################################################################################
-# set ipmimonitoring path
-our $IPMICOMMAND ="";
-if(-x "/usr/sbin/ipmimonitoring"){
-	$IPMICOMMAND = "/usr/sbin/ipmimonitoring";
-}
-elsif (-x "/usr/bin/ipmimonitoring"){
-	$IPMICOMMAND = "/usr/bin/ipmimonitoring";
-}
-elsif (-x "/usr/local/sbin/ipmimonitoring"){
-	$IPMICOMMAND = "/usr/local/sbin/ipmimonitoring";
-}
-elsif (-x "/usr/local/bin/ipmimonitoring"){
-	$IPMICOMMAND = "/usr/local/bin/ipmimonitoring";
-}
-else{
-	$missing_command_text = " ipmimonitoring command not found";
-}
-
-#define entire hashes
-our %hdrmap = (
-	'Record_ID'		=> 'id',	# FreeIPMI ...,0.7.x
-	'Record ID'		=> 'id',	# FreeIPMI 0.8.x,... with --legacy-output
-	'ID'			=> 'id',	# FreeIPMI 0.8.x
-	'Sensor Name'		=> 'name',
-	'Name'			=> 'name',	# FreeIPMI 0.8.x
-	'Sensor Group'		=> 'type',
-	'Type'			=> 'type',	# FreeIPMI 0.8.x
-	'Monitoring Status'	=> 'state',
-	'State'			=> 'state',	# FreeIPMI 0.8.x
-	'Sensor Units'		=> 'units',
-	'Units'			=> 'units',	# FreeIPMI 0.8.x
-	'Sensor Reading'	=> 'reading',
-	'Reading'		=> 'reading',	# FreeIPMI 0.8.x
-	'Event'			=> 'event',	# FreeIPMI 0.8.x
-    );
-
+# set text variables
 sub get_version
 {
     return <<EOT;
@@ -81,7 +47,6 @@ Copyright (C) 2009-2011 Thomas-Krenn.AG (written by Werner Fischer)
 Current updates available at http://www.thomas-krenn.com/en/oss/ipmi-plugin/
 EOT
 }
-
 sub get_usage
 {
     return <<EOT;
@@ -96,16 +61,15 @@ EOT
 sub get_help
 {
     return <<EOT;
-Options:
   -H <hostname>
        hostname or IP of the IPMI interface.
-       For "-H localhost" the Nagios/Icinga user must be allowed to execute
+       For \"-H localhost\" the Nagios/Icinga user must be allowed to execute
        ipmimonitoring with root privileges via sudo (ipmimonitoring must be
        able to access the IPMI devices via the IPMI system interface).
   [-f <FreeIPMI config file>]
        path to the FreeIPMI configuration file.
        Only neccessary for communication via network.
-       Not neccessary for access via IPMI system interface ("-H localhost").
+       Not neccessary for access via IPMI system interface (\"-H localhost\").
        It should contain IPMI username, IPMI password, and IPMI privilege-level,
        for example:
          username monitoring
@@ -155,12 +119,14 @@ Options:
        show version information
 
 When you use the plugin with newer FreeIPMI versions (version 0.8.* and newer)
-you can use --entity-sensor-names to identify multiple sensor instances,
-or --interpret-oem-data to interpret OEM data.
+you need to set the --legacy-ouput option to get a parsable output. Further you
+can use --interpret-oem-data to interpret OEM data (available since FreeIPMI
+version 0.8.*)
 You can set these options in your FreeIPMI configuration file:
+  ipmimonitoring-legacy-output on
   ipmi-sensors-interpret-oem-data on
 or you provide
-  -O '--interpret-oem-data --entity-sensor-names'
+  -O '--legacy-output --interpret-oem-data'
 to the plugin.
 
 Further information about this plugin can be found in the Thomas Krenn Wiki
@@ -194,6 +160,46 @@ sub usage
     exit($exitcode) if defined $exitcode;
 }
 
+our $missing_command_text = "";
+our $abort_text ="";
+
+################################################################################
+# set ipmimonitoring path
+our $IPMICOMMAND ="";
+if(-x "/usr/sbin/ipmimonitoring"){
+	$IPMICOMMAND = "/usr/sbin/ipmimonitoring";
+}
+elsif (-x "/usr/bin/ipmimonitoring"){
+	$IPMICOMMAND = "/usr/bin/ipmimonitoring";
+}
+elsif (-x "/usr/local/sbin/ipmimonitoring"){
+	$IPMICOMMAND = "/usr/local/sbin/ipmimonitoring";
+}
+elsif (-x "/usr/local/bin/ipmimonitoring"){
+	$IPMICOMMAND = "/usr/local/bin/ipmimonitoring";
+}
+else{
+	$missing_command_text = " ipmimonitoring command not found";
+}
+
+#define entire hashes
+our %hdrmap = (
+	'Record_ID'		=> 'id',	# FreeIPMI ...,0.7.x
+	'Record ID'		=> 'id',	# FreeIPMI 0.8.x,... with --legacy-output
+	'ID'			=> 'id',	# FreeIPMI 0.8.x
+	'Sensor Name'		=> 'name',
+	'Name'			=> 'name',	# FreeIPMI 0.8.x
+	'Sensor Group'		=> 'type',
+	'Type'			=> 'type',	# FreeIPMI 0.8.x
+	'Monitoring Status'	=> 'state',
+	'State'			=> 'state',	# FreeIPMI 0.8.x
+	'Sensor Units'		=> 'units',
+	'Units'			=> 'units',	# FreeIPMI 0.8.x
+	'Sensor Reading'	=> 'reading',
+	'Reading'		=> 'reading',# FreeIPMI 0.8.x
+	'Event'			=> 'event',	# FreeIPMI 0.8.x
+);
+
 our $verbosity = 0;
 
 MAIN: {
@@ -205,7 +211,7 @@ MAIN: {
 
     my @ARGV_SAVE = @ARGV;#keep args for verbose output
 
-	#before we read in command line arguments we check if ipmimonitoring is available
+	#check for ipmimonitoring
 	if( $missing_command_text ne "" ){
 		print STDOUT $missing_command_text;
 		exit(3);
@@ -243,7 +249,7 @@ MAIN: {
 			sub{print STDOUT get_usage();
 				exit(3);
 			}	
-	) )){
+	) ) ){
 		usage(1);#call usage if GetOptions failed
 	}
 	#\s defines any whitespace characters
@@ -254,7 +260,7 @@ MAIN: {
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
     
     usage(1) if @ARGV;#print usage if unknown arg list is left
-   
+    #TODO Also necessary for bash version?   
 
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
@@ -351,85 +357,81 @@ MAIN: {
 		#split at newlines, fetch array with lines of output
 		my @ipmioutput = split('\n', $ipmioutput);
 	
-	#remove leading and trailing whitespace characters, split at the pipe delimiter
-	@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
+		#remove leading and trailing whitespace characters, split at the pipe delimiter
+		@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
 	
-	#shift out the header as it is the first line
-	my $header = shift @ipmioutput;
-	my %header;
-	for(my $i = 0; $i < @$header; $i++)
-	{
-		#assigning %header with (key from hdrmap) => $i
-		#checking at which position in the header is which key
-	    $header{$hdrmap{$header->[$i]}} = $i;
-	}
-	
-	my @ipmioutput2;
-	foreach my $row ( @ipmioutput ){
-		my %row;
-		#fetch keys from header and assign existent values to row
-		#this maps the values from row(ipmioutput) to the header values
-		while ( my ($key, $index) = each %header ){
-			$row{$key} = $row->[$index];
+		#shift out the header as it is the first line
+		my $header = shift @ipmioutput;
+		my %header;
+		for(my $i = 0; $i < @$header; $i++)
+		{
+			#assigning %header with (key from hdrmap) => $i
+			#checking at which position in the header is which key
+		    $header{$hdrmap{$header->[$i]}} = $i;
 		}
-		push @ipmioutput2, \%row;
-	}
-	#create hash with sensor name an 1
-	my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
-	#filter out the desired sensor values
-	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
-		
-	#TODO Check if we need to grep again?
-	@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
 	
-	my $exit = 0;
-	my $w_sensors = '';
-	my $perf;
-	foreach my $row ( @ipmioutput2 ){
-	    if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
-			$exit = 1 if $exit < 1;
-			$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
-			#don't insert a , the first time
-			$w_sensors .= ", " unless $w_sensors eq '';
-			$w_sensors .= "$row->{'name'} = $row->{'state'}";
-			$w_sensors .= " ($row->{'reading'})" if $verbosity > 0;
-	    }
-	    if ( $row->{'units'} ne 'N/A' ){
-			my $val = $row->{'reading'};
-			$val =~ s/(\.[0-9]*?)0+$/$1/;
-			$val =~ s/\.$//;
-			$perf .= qq|'$row->{'name'}'=$val |;
-	    }
-	}
-	$perf = substr($perf, 0, -1);
-	if ( $exit == 0 )
-	{
-	    print "OK";
-	}
-	elsif ( $exit == 1 )
-	{
-	    print "Warning [$w_sensors]";
-	}
-	else
-	{
-	    print "Critical [$w_sensors]";
-	}
-	print " | ", $perf if $perf ne '';
-	print "\n";
-	
-	if ( $verbosity > 1 )
-	{
-	    foreach my $row (@ipmioutput2)
-	    {
-			#if outformat is zenoss we substitute whitespaces with underscores
-			if($ipmi_outformat eq "zenoss"){
-				$row->row->{'name'} =~ s/ /_/g;
+		my @ipmioutput2;
+		foreach my $row ( @ipmioutput ){
+			my %row;
+			#fetch keys from header and assign existent values to row
+			#this maps the values from row(ipmioutput) to the header values
+			while ( my ($key, $index) = each %header ){
+				$row{$key} = $row->[$index];
 			}
-			print "$row->{'name'}=$row->{'reading'} (Status: $row->{'state'})\n";
-	    }
+			push @ipmioutput2, \%row;
+		}
+		#create hash with sensor name an 1
+		my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
+		#filter out the desired sensor values
+		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+		
+		#TODO Check if we need to grep again?
+		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+	
+		my $exit = 0;
+		my $w_sensors = '';
+		my $perf = '';
+		#TODO Check handling of Nominal and N/A sensors
+		#TODO Zenoss for all or just the included ones?
+		foreach my $row ( @ipmioutput2 ){
+			if($ipmi_outformat eq "zenoss"){
+				$row->{'name'} =~ s/ /_/g;
+			}
+	    	if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
+				$exit = 1 if $exit < 1;
+				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
+				#don't insert a , the first time
+				$w_sensors .= ", " unless $w_sensors eq '';
+				$w_sensors .= "$row->{'name'} = $row->{'state'}";
+				$w_sensors .= " ($row->{'reading'})" if $verbosity > 0;
+	    	}
+	    	if ( $row->{'units'} ne 'N/A' ){
+				my $val = $row->{'reading'};
+				$val =~ s/(\.[0-9]*?)0+$/$1/;
+				$val =~ s/\.$//;
+				$perf .= qq|'$row->{'name'}'=$val |;
+	    	}
+		}
+		$perf = substr($perf, 0, -1);#cut off the last chars
+		if ( $exit == 0 ){
+		    print "OK";
+		}
+		elsif ( $exit == 1 ){
+		    print "Warning [$w_sensors]";
+		}
+		else{
+			print "Critical [$w_sensors]";
+		}
+		print " | ", $perf if $perf ne '';
+		print "\n";
+	
+		if ( $verbosity > 1 ){
+	    	foreach my $row (@ipmioutput2){
+				print "$row->{'name'}=$row->{'reading'} (Status: $row->{'state'})\n";
+	    	}
+		}
+		exit $exit;
 	}
-	exit $exit;
-    }
 };
 
 # vim:ai:sw=4:sts=4:
