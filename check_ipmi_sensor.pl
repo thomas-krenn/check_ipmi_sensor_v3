@@ -231,7 +231,7 @@ MAIN: {
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},#TODO Check verbosity levels
 		'x|exclude=s'		=> \@ipmi_xlist, #TODO Check if numbers instead of strings must be used
-		'o|outformat'		=> \$ipmi_outformat,
+		'o|outformat=s'		=> \$ipmi_outformat,
 		'h|help'	    	=> 
 			sub{print STDOUT get_version();
 				print STDOUT "\n";
@@ -307,7 +307,13 @@ MAIN: {
     #if -b is not defined, caching options are used
     if( !(defined $freeipmi_compat) ){
     	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
-    }    
+    }  
+    
+    #check for zenoss output
+    my $zenoss = 0;
+    if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
+    	$zenoss = 1;
+    }		
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
@@ -388,15 +394,18 @@ MAIN: {
 		#TODO Check if we need to grep again?
 		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
 	
-		my $exit = 0;
-		my $w_sensors = '';
-		my $perf = '';
+		my $exit = 0;		
+		my $w_sensors = '';		
+		my $perf = '';		
+		
 		#TODO Check handling of Nominal and N/A sensors
 		#TODO Zenoss for all or just the included ones?
 		foreach my $row ( @ipmioutput2 ){
-			if($ipmi_outformat eq "zenoss"){
+			if( $zenoss ){
 				$row->{'name'} =~ s/ /_/g;
 			}
+			#TODO Check for events
+			#check for warning sensors
 	    	if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
 				$exit = 1 if $exit < 1;
 				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
@@ -409,7 +418,12 @@ MAIN: {
 				my $val = $row->{'reading'};
 				$val =~ s/(\.[0-9]*?)0+$/$1/;
 				$val =~ s/\.$//;
-				$perf .= qq|'$row->{'name'}'=$val |;
+				if($zenoss){
+					$perf .= qq|$row->{'name'}=$val |;
+				}
+				else{
+					$perf .= qq|'$row->{'name'}'=$val |;	
+				}				
 	    	}
 		}
 		$perf = substr($perf, 0, -1);#cut off the last chars
@@ -425,6 +439,8 @@ MAIN: {
 		print " | ", $perf if $perf ne '';
 		print "\n";
 	
+		#TODO Check if event instead of state must be used
+		#TODO Omit sensors for which the state is N/A
 		if ( $verbosity > 1 ){
 	    	foreach my $row (@ipmioutput2){
 				print "$row->{'name'}=$row->{'reading'} (Status: $row->{'state'})\n";
