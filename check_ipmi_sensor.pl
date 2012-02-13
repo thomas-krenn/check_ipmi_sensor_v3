@@ -139,28 +139,25 @@ sub usage
 {
     my ($arg) = @_; #the list of inputs
     my ($exitcode);
-    if ( defined $arg ) #check if parameters were given
-    {
-	#m is the match operator for regex
-	if ( $arg =~ m/^\d+$/ )
-	{
-	    $exitcode = $arg;
-	}
-	else
-	{
-	    print STDOUT $arg, "\n";
-	    $exitcode = 1;
-	}
+    if ( defined $arg ){
+		if ( $arg =~ m/^\d+$/ ){
+	    	$exitcode = $arg;
+		}
+		else{
+			print STDOUT $arg, "\n";
+	    	$exitcode = 1;
+		}
     }
     print STDOUT get_usage();
     exit($exitcode) if defined $exitcode;
 }
 
-our $missing_command_text = "";
-our $abort_text ="";
+
+
 
 ################################################################################
 # set ipmimonitoring path
+our $MISSING_COMMAND_TEXT = '';
 our $IPMICOMMAND ="";
 if(-x "/usr/sbin/ipmimonitoring"){
 	$IPMICOMMAND = "/usr/sbin/ipmimonitoring";
@@ -175,7 +172,19 @@ elsif (-x "/usr/local/bin/ipmimonitoring"){
 	$IPMICOMMAND = "/usr/local/bin/ipmimonitoring";
 }
 else{
-	$missing_command_text = " ipmimonitoring command not found";
+	$MISSING_COMMAND_TEXT = " ipmimonitoring command not found";
+}
+
+# Identify the version of the ipmi-tool
+sub get_ipmi_version{
+	my @ipmi_version_output = '';
+	my $ipmi_version = '';
+	@ipmi_version_output = `$IPMICOMMAND -V`;
+	$ipmi_version = shift(@ipmi_version_output);
+	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;	
+	@ipmi_version_output = ();
+	push @ipmi_version_output,$1,$2,$3;
+	return @ipmi_version_output;
 }
 
 #define entire hashes
@@ -200,17 +209,27 @@ our $verbosity = 0;
 
 MAIN: {
     $| = 1; #force a flush after every write or print
+    my @ARGV_SAVE = @ARGV;#keep args for verbose output
     my ($show_help, $show_version);
     my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
     my (@freeipmi_options, $freeipmi_compat);
     my (@ipmi_sensor_types, @ipmi_xlist);
-
-    my @ARGV_SAVE = @ARGV;#keep args for verbose output
+    my (@ipmi_version);
+    my $ipmi_sensors = 0;
+	my $abort_text ='';
+	my $zenoss = 0;
 
 	#check for ipmimonitoring
-	if( $missing_command_text ne "" ){
-		print STDOUT $missing_command_text;
+	if( $MISSING_COMMAND_TEXT ne "" ){
+		print STDOUT $MISSING_COMMAND_TEXT;
 		exit(3);
+	}
+	else{
+		@ipmi_version = get_ipmi_version();
+		if( $ipmi_version[0] > 0 ){
+			$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;		
+			$ipmi_sensors = 1;
+		}
 	}
 
 	#read in command line arguments and init hash variables with the given values from argv
@@ -225,8 +244,8 @@ MAIN: {
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
-		'vvv'				=> sub{$verbosity=3},#TODO Check verbosity levels
-		'x|exclude=s'		=> \@ipmi_xlist, #TODO Check if numbers instead of strings must be used
+		'vvv'				=> sub{$verbosity=3},
+		'x|exclude=s'		=> \@ipmi_xlist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'h|help'	    	=> 
 			sub{print STDOUT get_version();
@@ -241,31 +260,21 @@ MAIN: {
 				print STDOUT get_version();
 				exit(0);
 			},
-		'usage|?'					=> #TODO Verify if usage is OK here
+		'usage|?'					=> 
 			sub{print STDOUT get_usage();
 				exit(3);
 			}	
 	) ) ){
 		usage(1);#call usage if GetOptions failed
 	}
+	usage(1) if @ARGV;#print usage if unknown arg list is left
+	
 	#\s defines any whitespace characters
 	#first join the list, then split it at whitespace ' '
 	#also cf. http://perldoc.perl.org/Getopt/Long.html#Options-with-multiple-values
     @freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
     @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
-    
-	usage(1) if @ARGV;#print usage if unknown arg list is left
-        
-################################################################################
-# Identify the version of the ipmi-tool
-	my @ipmi_version_output = '';
-	my $ipmi_version = '';
-	@ipmi_version_output = `$IPMICOMMAND -V`;
-	$ipmi_version = shift(@ipmi_version_output);
-	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;	
-	@ipmi_version_output = ();
-	push @ipmi_version_output,$1,$2,$3;
 		
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
@@ -288,16 +297,12 @@ MAIN: {
 				$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
 			}
     	}    		
-    }
-    
-    #TODO Insert missing command text here if desired
-    
+    }        
     if( $abort_text ne ""){
     	print STDOUT "Error: " . $abort_text . " missing.";
 		print STDOUT get_usage();
 		exit(3);	
-    }
-    
+    }    
     # , is the seperator in the new string
     if(@ipmi_sensor_types){
     	 push @basecmd, '-g', join(',', @ipmi_sensor_types);    	 
@@ -312,10 +317,14 @@ MAIN: {
     #if -b is not defined, caching options are used
     if( !(defined $freeipmi_compat) ){
     	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
-    }  
+    }
     
-    #check for zenoss output
-    my $zenoss = 0;
+    #if ipmi-sensors is used show the state of sensors
+    if($ipmi_sensors){
+    	push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
+    }    
+    
+    #check for zenoss output    
     if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
     	$zenoss = 1;
     }		
@@ -395,21 +404,15 @@ MAIN: {
 		my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
 		#filter out the desired sensor values
 		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
-		
-		#TODO Check if we need to grep again?
-		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
 	
 		my $exit = 0;		
-		my $w_sensors = '';		
-		my $perf = '';		
+		my $w_sensors = '';#sensors with warnings		
+		my $perf = '';#performance sensor		
 		
-		#TODO Check handling of Nominal and N/A sensors
-		#TODO Zenoss for all or just the included ones?
 		foreach my $row ( @ipmioutput2 ){
 			if( $zenoss ){
 				$row->{'name'} =~ s/ /_/g;
 			}
-			#TODO Check for events
 			#check for warning sensors
 	    	if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
 				$exit = 1 if $exit < 1;
@@ -417,7 +420,14 @@ MAIN: {
 				#don't insert a , the first time
 				$w_sensors .= ", " unless $w_sensors eq '';
 				$w_sensors .= "$row->{'name'} = $row->{'state'}";
-				$w_sensors .= " ($row->{'reading'})" if $verbosity > 0;
+				if( $verbosity ){
+					if( $row->{'reading'} ne 'N/A'){
+						$w_sensors .= " ($row->{'reading'})" ;
+					}
+					else{
+						$w_sensors .= " ($row->{'event'})";
+					}
+				}		
 	    	}
 	    	if ( $row->{'units'} ne 'N/A' ){
 				my $val = $row->{'reading'};
@@ -442,11 +452,18 @@ MAIN: {
 		print " | ", $perf if $perf ne '';
 		print "\n";
 	
-		#TODO Check if event instead of state must be used
-		#TODO Omit sensors for which the state is N/A
 		if ( $verbosity > 1 ){
 	    	foreach my $row (@ipmioutput2){
-				print "$row->{'name'}=$row->{'reading'} (Status: $row->{'state'})\n";
+	    		if( $row->{'reading'} ne 'N/A'){
+					print "$row->{'name'}=$row->{'reading'} ";
+	    		}
+	    		elsif( $row->{'event'} ne 'N/A'){
+	    			print "$row->{'name'}=$row->{'event'} ";	
+	    		}
+	    		else{
+	    			next;
+	    		}
+				print "(Status: $row->{'state'})\n";
 	    	}
 		}
 		exit $exit;
