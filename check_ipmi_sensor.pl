@@ -33,10 +33,6 @@ use strict;
 use warnings;
 use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
-
-use lib '/usr/lib/nagios/plugins';
-use utils qw(%ERRORS);
-
 ################################################################################
 # set text variables
 sub get_version
@@ -259,9 +255,18 @@ MAIN: {
     @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
     
-    usage(1) if @ARGV;#print usage if unknown arg list is left
-    #TODO Also necessary for bash version?   
-
+	usage(1) if @ARGV;#print usage if unknown arg list is left
+        
+################################################################################
+# Identify the version of the ipmi-tool
+	my @ipmi_version_output = '';
+	my $ipmi_version = '';
+	@ipmi_version_output = `$IPMICOMMAND -V`;
+	$ipmi_version = shift(@ipmi_version_output);
+	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;	
+	@ipmi_version_output = ();
+	push @ipmi_version_output,$1,$2,$3;
+		
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
     my @basecmd; #variable for command to call ipmi
@@ -416,8 +421,6 @@ MAIN: {
 	    	}
 	    	if ( $row->{'units'} ne 'N/A' ){
 				my $val = $row->{'reading'};
-				$val =~ s/(\.[0-9]*?)0+$/$1/;
-				$val =~ s/\.$//;
 				if($zenoss){
 					$perf .= qq|$row->{'name'}=$val |;
 				}
