@@ -151,10 +151,6 @@ sub usage
     print STDOUT get_usage();
     exit($exitcode) if defined $exitcode;
 }
-
-
-
-
 ################################################################################
 # set ipmimonitoring path
 our $MISSING_COMMAND_TEXT = '';
@@ -179,7 +175,8 @@ else{
 sub get_ipmi_version{
 	my @ipmi_version_output = '';
 	my $ipmi_version = '';
-	@ipmi_version_output = `$IPMICOMMAND -V`;
+	@ipmi_version_output = `/home/gschoenb/applications/ipmi/1.1.2/sbin/ipmi-sensors -V`;
+#	@ipmi_version_output = `$IPMICOMMAND -V`;
 	$ipmi_version = shift(@ipmi_version_output);
 	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;	
 	@ipmi_version_output = ();
@@ -215,9 +212,10 @@ MAIN: {
     my (@freeipmi_options, $freeipmi_compat);
     my (@ipmi_sensor_types, @ipmi_xlist);
     my (@ipmi_version);
-    my $ipmi_sensors = 0;
+    my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
 	my $abort_text ='';
 	my $zenoss = 0;
+	my $simulate;
 
 	#check for ipmimonitoring
 	if( $MISSING_COMMAND_TEXT ne "" ){
@@ -227,8 +225,10 @@ MAIN: {
 	else{
 		@ipmi_version = get_ipmi_version();
 		if( $ipmi_version[0] > 0 ){
-			$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;		
+			#$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;	
+			$IPMICOMMAND = "/home/gschoenb/applications/ipmi/1.1.2/sbin/ipmi-sensors";	
 			$ipmi_sensors = 1;
+			print "DEBUG: using ipmi-sensors: $IPMICOMMAND\n";
 		}
 	}
 
@@ -247,6 +247,7 @@ MAIN: {
 		'vvv'				=> sub{$verbosity=3},
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'o|outformat=s'		=> \$ipmi_outformat,
+		's'					=>\$simulate,
 		'h|help'	    	=> 
 			sub{print STDOUT get_version();
 				print STDOUT "\n";
@@ -275,7 +276,11 @@ MAIN: {
     @freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
     @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
-		
+    
+    #check for zenoss output    
+    if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
+    	$zenoss = 1;
+    }
 ################################################################################
 # verify if all mandatory parameters are set and initialize various variables
     my @basecmd; #variable for command to call ipmi
@@ -318,25 +323,31 @@ MAIN: {
     if( !(defined $freeipmi_compat) ){
     	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
     }
+    #since version 0.8 it is possible to interpret OEM data
+    if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) ||
+			$ipmi_version[0] > 0){
+				push @getstatus, '--interpret-oem-data';
+	}
     
-    #if ipmi-sensors is used show the state of sensors
+    #if ipmi-sensors is used show the state of sensors an ignore N/A
     if($ipmi_sensors){
     	push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
-    }    
-    
-    #check for zenoss output    
-    if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
-    	$zenoss = 1;
-    }		
+    }    		
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
 	my $ipmioutput;
-    run \@getstatus, '>&', \$ipmioutput;
-    #the upper eight bits contain the error condition (exit code)
-    #see http://perldoc.perl.org/perlvar.html#Error-Variables
-    my $returncode = $? >> 8;
-
+	my $returncode;
+	if(!$simulate){
+		run \@getstatus, '>&', \$ipmioutput;
+	    #the upper eight bits contain the error condition (exit code)
+    	#see http://perldoc.perl.org/perlvar.html#Error-Variables
+    	$returncode = $? >> 8;
+	}
+	else{
+		$ipmioutput = `cat /home/gschoenb/applications/ipmi/outputs/1.1.2-sensor-state-ignoreNA-interpretOEM.out`;
+		$returncode = 0;
+	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
     if ( $verbosity == 3 ){
@@ -454,11 +465,14 @@ MAIN: {
 	
 		if ( $verbosity > 1 ){
 	    	foreach my $row (@ipmioutput2){
-	    		if( $row->{'reading'} ne 'N/A'){
-					print "$row->{'name'}=$row->{'reading'} ";
+	    		if( $row->{'state'} eq 'N/A'){
+	    			next;
+	    		}	    		
+	    		elsif( $row->{'reading'} ne 'N/A'){
+					print "$row->{'name'} = $row->{'reading'} ";
 	    		}
 	    		elsif( $row->{'event'} ne 'N/A'){
-	    			print "$row->{'name'}=$row->{'event'} ";	
+	    			print "$row->{'name'} = $row->{'event'} ";	
 	    		}
 	    		else{
 	    			next;
