@@ -53,7 +53,6 @@ check_ipmi_sensor -H <hostname>
   [-o zenoss] [-h] [-V]
 EOT
 }
-
 sub get_help
 {
     return <<EOT;
@@ -134,7 +133,6 @@ use of this software, to submit patches, or suggest improvements.
 The mailing list is available at http://lists.thomas-krenn.com/
 EOT
 }
-
 sub usage
 {
     my ($arg) = @_; #the list of inputs
@@ -175,13 +173,23 @@ else{
 sub get_ipmi_version{
 	my @ipmi_version_output = '';
 	my $ipmi_version = '';
-	@ipmi_version_output = `/home/gschoenb/applications/ipmi/1.1.2/sbin/ipmi-sensors -V`;
-#	@ipmi_version_output = `$IPMICOMMAND -V`;
+	@ipmi_version_output = `$IPMICOMMAND -V`;
 	$ipmi_version = shift(@ipmi_version_output);
 	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;	
 	@ipmi_version_output = ();
 	push @ipmi_version_output,$1,$2,$3;
 	return @ipmi_version_output;
+}
+
+sub simulate{
+	my $output = '';
+	my $simul_file = $_[0];
+	if( !defined $simul_file || (-x '\"'.$simul_file.'\"')){
+		print "DEBUG: Using simulation file: $simul_file\n";
+		print "Error: Simulation file with ipmi output not found.\n";
+		exit(3);
+	}
+	return ($output = `cat $simul_file`);	
 }
 
 #define entire hashes
@@ -213,24 +221,9 @@ MAIN: {
     my (@ipmi_sensor_types, @ipmi_xlist);
     my (@ipmi_version);
     my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
-	my $abort_text ='';
+	my $abort_text = '';
 	my $zenoss = 0;
-	my $simulate;
-
-	#check for ipmimonitoring
-	if( $MISSING_COMMAND_TEXT ne "" ){
-		print STDOUT $MISSING_COMMAND_TEXT;
-		exit(3);
-	}
-	else{
-		@ipmi_version = get_ipmi_version();
-		if( $ipmi_version[0] > 0 ){
-			#$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;	
-			$IPMICOMMAND = "/home/gschoenb/applications/ipmi/1.1.2/sbin/ipmi-sensors";	
-			$ipmi_sensors = 1;
-			print "DEBUG: using ipmi-sensors: $IPMICOMMAND\n";
-		}
-	}
+	my $simulate = '';
 
 	#read in command line arguments and init hash variables with the given values from argv
     if ( !( GetOptions(
@@ -247,7 +240,7 @@ MAIN: {
 		'vvv'				=> sub{$verbosity=3},
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'o|outformat=s'		=> \$ipmi_outformat,
-		's'					=>\$simulate,
+		's=s'					=>\$simulate,
 		'h|help'	    	=> 
 			sub{print STDOUT get_version();
 				print STDOUT "\n";
@@ -270,6 +263,29 @@ MAIN: {
 	}
 	usage(1) if @ARGV;#print usage if unknown arg list is left
 	
+################################################################################
+# check for ipmimonitoring or ipmi-sensors. Since version > 0.8 ipmi-sensors is used
+# if '--legacy-output' is given ipmi-sensors cannot be used	
+
+	if( $MISSING_COMMAND_TEXT ne "" ){
+		print STDOUT "Error:$MISSING_COMMAND_TEXT";
+		exit(3);
+	}
+	else{
+		@ipmi_version = get_ipmi_version();
+		if( $ipmi_version[0] > 0 && (grep(/legacy\-output/,@freeipmi_options)) == 0){
+			$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;	
+			$ipmi_sensors = 1;
+			print "DEBUG: using ipmi-sensors: $IPMICOMMAND\n";
+		}
+		#TODO Remove this sections, it is only to test the legacy option
+		else{
+			print "DEBUG: using ipmimonitoring: $IPMICOMMAND\n";
+		}
+	}
+
+###############################################################################
+# verify if all mandatory parameters are set and initialize various variables
 	#\s defines any whitespace characters
 	#first join the list, then split it at whitespace ' '
 	#also cf. http://perldoc.perl.org/Getopt/Long.html#Options-with-multiple-values
@@ -281,8 +297,7 @@ MAIN: {
     if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
     	$zenoss = 1;
     }
-################################################################################
-# verify if all mandatory parameters are set and initialize various variables
+
     my @basecmd; #variable for command to call ipmi
     if( !(defined $ipmi_host) ){
     	$abort_text= $abort_text . " -H <hostname>"
@@ -312,6 +327,7 @@ MAIN: {
     if(@ipmi_sensor_types){
     	 push @basecmd, '-g', join(',', @ipmi_sensor_types);    	 
     }
+   
     if(@freeipmi_options){
     	push @basecmd, @freeipmi_options;
     }
@@ -323,6 +339,7 @@ MAIN: {
     if( !(defined $freeipmi_compat) ){
     	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
     }
+    #TODO Add a command parameter to disable all default parameters
     #since version 0.8 it is possible to interpret OEM data
     if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) ||
 			$ipmi_version[0] > 0){
@@ -345,7 +362,8 @@ MAIN: {
     	$returncode = $? >> 8;
 	}
 	else{
-		$ipmioutput = `cat /home/gschoenb/applications/ipmi/outputs/1.1.2-sensor-state-ignoreNA-interpretOEM.out`;
+		$ipmioutput = simulate($simulate);
+		print "DEBUG: Using simulation mode\n";
 		$returncode = 0;
 	}
 ################################################################################
