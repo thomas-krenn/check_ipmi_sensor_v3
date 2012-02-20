@@ -280,6 +280,7 @@ MAIN: {
 		}
 		#TODO Remove this sections, it is only to test the legacy option
 		else{
+			#TODO add '--legacy-output' per default if desired
 			print "DEBUG: using ipmimonitoring: $IPMICOMMAND\n";
 		}
 	}
@@ -450,6 +451,7 @@ MAIN: {
 				$w_sensors .= ", " unless $w_sensors eq '';
 				$w_sensors .= "$row->{'name'} = $row->{'state'}";
 				if( $verbosity ){
+					#TODO Check if zenoos substitution must be applied here
 					if( $row->{'reading'} ne 'N/A'){
 						$w_sensors .= " ($row->{'reading'})" ;
 					}
