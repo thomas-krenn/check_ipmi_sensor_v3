@@ -2,6 +2,12 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.1-dev 20120222
+  * Reformatted code to be as close as possible to check_ipmi_sensor v2 (bash).
+  * Fetched Version 3.0 from https://github.com/zito/check_ipmi_sensor.git
+  * Moved development to git.thomas-krenn.com
+  * Added various default options.
+
 Version 3.0 20110501
   * The code rewritten using the Perl.
   * Added long variant options.
@@ -14,26 +20,13 @@ Version 2.2 20110127
   * Added ipmimonitoring version information in verbose output (-v 3).
   * Further improved readability of the help text (-x Option).
 
-Version 2.1 20110124
-  * Fixed wrong variable name $IPMICOMMAND in line 133, which prevented the
-    successful usage of the -T option of the plugin.
-    contributor: Sebastian Mörchen, DFS Deutsche Flugsicherung GmbH
-  * Added possibility to supply username/password/priviledge-level as parameters
-    -U/-P/-L when someones wants to avoid using the FreeIPMI config file. Useful
-    for RHEL/Centos 5.* with FreeIPMI 0.5.1 (this elder FreeIPMI version does
-    not support config files).
-    contributor: Gustav Olsson, Telavox AB
-  * Added -O option to pass FreeIPMI options directly to the plugin (without
-    using a FreeIPMI config file). Useful for RHEL/CentOS 5.* with FreeIPMI
-    0.5.1 (like -U/-P/-L above).
-  * Improved readability and articulateness of the help text.
-  * Tested with FreeIPMI 0.7.17 (package from Ubuntu 10.10) and with the new
-    version 1.0.1 (using FreeIPMI options ipmimonitoring-legacy-output and
-    ipmi-sensors-interpret-oem-data)
+List of contributors to version 3.* branch:
+  Václav Ovsík
 
-Version 2.0 20110111
-  * First release based on ipmimonitoring (FreeIPMI)
-  * Forked from check_ipmi_sensor Version 1.3rc1 20100929
+List of contributors to version 2.* branch:
+  Tobias Gablunsky, CBXNET combox internet GmbH
+  Sebastian Mörchen, DFS Deutsche Flugsicherung GmbH
+  Gustav Olsson, Telavox AB
 
 List of contributors to version 1.* branch:
   Nikolaus Filus (to version 1.3rc1)
