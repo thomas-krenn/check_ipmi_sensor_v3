@@ -339,7 +339,6 @@ MAIN: {
     if( !(defined $freeipmi_compat) ){
     	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
     }
-    #TODO Add a command parameter to disable all default parameters
     #since version 0.8 it is possible to interpret OEM data
     if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) ||
 			$ipmi_version[0] > 0){
