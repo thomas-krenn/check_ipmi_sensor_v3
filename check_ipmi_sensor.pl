@@ -38,8 +38,8 @@ use IPC::Run qw( run ); #interact with processes
 sub get_version
 {
     return <<EOT;
-check_ipmi_sensor version 3.0 2011-05-01
-Copyright (C) 2009-2011 Thomas-Krenn.AG (written by Werner Fischer)
+check_ipmi_sensor version 3.1-dev 2012-02-22
+Copyright (C) 2009-2012 Thomas-Krenn.AG
 Current updates available at http://www.thomas-krenn.com/en/oss/ipmi-plugin/
 EOT
 }
