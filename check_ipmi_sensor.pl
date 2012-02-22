@@ -97,12 +97,12 @@ sub get_help
        Option can be specified multiple times. The <sensor id> is a numeric
        value (sensor names are not used as some servers have multiple sensors
        with the same name). Use -v 3 option to query the <sensor ids>.
-  [-v 1|2|3]
+  [-v]
        be verbose
          (no -v) .. single line output
-         -v 1 ..... single line output with additional details for warnings
-         -v 2 ..... multi line output, also with additional details for warnings
-         -v 3 ..... debugging output, followed by normal multi line output
+         -v   ..... single line output with additional details for warnings
+         -vv  ..... multi line output, also with additional details for warnings
+         -vvv ..... debugging output, followed by normal multi line output
   [-o]
        change output format. Useful for using the plugin with other monitoring
        software than Nagios or Icinga.
@@ -113,20 +113,8 @@ sub get_help
   [-V]
        show version information
 
-When you use the plugin with newer FreeIPMI versions (version 0.8.* and newer)
-you need to set the --legacy-ouput option to get a parsable output. Further you
-can use --interpret-oem-data to interpret OEM data (available since FreeIPMI
-version 0.8.*)
-You can set these options in your FreeIPMI configuration file:
-  ipmimonitoring-legacy-output on
-  ipmi-sensors-interpret-oem-data on
-or you provide
-  -O '--legacy-output --interpret-oem-data'
-to the plugin.
-
-Further information about this plugin can be found in the Thomas Krenn Wiki
-(currently only in German):
-http://www.thomas-krenn.com/de/wiki/IPMI_Sensor_Monitoring_Plugin
+Further information about this plugin can be found at
+http://www.thomas-krenn.com/en/oss/ipmi-plugin.html
 
 Send email to the IPMI-plugin-user mailing list if you have questions regarding
 use of this software, to submit patches, or suggest improvements.
@@ -276,7 +264,6 @@ MAIN: {
 		if( $ipmi_version[0] > 0 && (grep(/legacy\-output/,@freeipmi_options)) == 0){
 			$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;	
 			$ipmi_sensors = 1;
-			print "DEBUG: using ipmi-sensors: $IPMICOMMAND\n";
 		}
 		if( $ipmi_version[0] > 0 && (grep(/legacy\-output/,@freeipmi_options)) == 1){
 			print "Error: Cannot use ipmi-sensors with option \'--legacy-output\'. Remove it to work correctly.\n";
