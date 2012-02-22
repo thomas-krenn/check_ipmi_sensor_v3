@@ -278,10 +278,9 @@ MAIN: {
 			$ipmi_sensors = 1;
 			print "DEBUG: using ipmi-sensors: $IPMICOMMAND\n";
 		}
-		#TODO Remove this sections, it is only to test the legacy option
-		else{
-			#TODO add '--legacy-output' per default if desired
-			print "DEBUG: using ipmimonitoring: $IPMICOMMAND\n";
+		if( $ipmi_version[0] > 0 && (grep(/legacy\-output/,@freeipmi_options)) == 1){
+			print "Error: Cannot use ipmi-sensors with option \'--legacy-output\'. Remove it to work correctly.\n";
+			exit(3);
 		}
 	}
 
@@ -346,11 +345,14 @@ MAIN: {
 			$ipmi_version[0] > 0){
 				push @getstatus, '--interpret-oem-data';
 	}
-    
-    #if ipmi-sensors is used show the state of sensors an ignore N/A
-    if($ipmi_sensors){
-    	push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
-    }    		
+	#since version 0.8 it is necessary to add the legacy option
+	if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) && (grep(/legacy\-output/,@freeipmi_options) == 0)){
+			push @getstatus, '--legacy-output';
+	}
+	#if ipmi-sensors is used show the state of sensors an ignore N/A
+	if($ipmi_sensors){
+		push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
+	}    		
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
@@ -451,7 +453,6 @@ MAIN: {
 				$w_sensors .= ", " unless $w_sensors eq '';
 				$w_sensors .= "$row->{'name'} = $row->{'state'}";
 				if( $verbosity ){
-					#TODO Check if zenoos substitution must be applied here
 					if( $row->{'reading'} ne 'N/A'){
 						$w_sensors .= " ($row->{'reading'})" ;
 					}
