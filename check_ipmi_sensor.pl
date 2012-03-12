@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # check_ipmi_sensor: Nagios/Icinga plugin to check IPMI sensors
 #
-# Copyright (C) 2009-2011 Thomas-Krenn.AG (written by Werner Fischer),
+# Copyright (C) 2009-2012 Thomas-Krenn.AG,
 # additional contributors see changelog.txt
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -194,7 +194,7 @@ our %hdrmap = (
 	'Sensor Units'		=> 'units',
 	'Units'			=> 'units',	# FreeIPMI 0.8.x
 	'Sensor Reading'	=> 'reading',
-	'Reading'		=> 'reading',# FreeIPMI 0.8.x
+	'Reading'		=> 'reading',	# FreeIPMI 0.8.x
 	'Event'			=> 'event',	# FreeIPMI 0.8.x
 );
 

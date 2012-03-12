@@ -2,7 +2,10 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
-Version 3.1-dev 20120222
+Version 3.1-dev
+  * Documentation cleanups.
+
+Version 3.1rc1 20120222
   * Reformatted code to be as close as possible to check_ipmi_sensor v2 (bash).
   * Fetched Version 3.0 from https://github.com/zito/check_ipmi_sensor.git
   * Moved development to git.thomas-krenn.com
@@ -21,15 +24,19 @@ Version 2.2 20110127
   * Further improved readability of the help text (-x Option).
 
 List of contributors to version 3.* branch:
-  Václav Ovsík
+  Werner Fischer, Thomas-Krenn.AG 
+  Georg Schönberger, Thomas-Krenn.AG
+  Václav Ovsík (ported version 2 to Perl)
 
 List of contributors to version 2.* branch:
+  Werner Fischer, Thomas-Krenn.AG (author)
   Tobias Gablunsky, CBXNET combox internet GmbH
   Sebastian Mörchen, DFS Deutsche Flugsicherung GmbH
   Gustav Olsson, Telavox AB
 
 List of contributors to version 1.* branch:
   Nikolaus Filus (to version 1.3rc1)
+  Werner Fischer, Thomas-Krenn.AG (author)
   Lars Meuser, LMA Deutschland GmbH (to version 1.2.1)
   Holger Paschke, comspace GmbH & Co. KG (to version 1.2)
   Ulrich Zehl, lagis Internet Serviceprovider GmbH (to version 1.1)
