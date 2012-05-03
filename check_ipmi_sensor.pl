@@ -38,7 +38,7 @@ use IPC::Run qw( run ); #interact with processes
 sub get_version
 {
     return <<EOT;
-check_ipmi_sensor version 3.1-dev 2012-02-22
+check_ipmi_sensor version 3.1-dev 2012-05-03
 Copyright (C) 2009-2012 Thomas-Krenn.AG
 Current updates available at http://www.thomas-krenn.com/en/oss/ipmi-plugin/
 EOT
@@ -49,7 +49,7 @@ sub get_usage
 Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
-  [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-v 1|2|3]
+  [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-v|-vv|-vvv]
   [-o zenoss] [-h] [-V]
 EOT
 }
@@ -97,7 +97,7 @@ sub get_help
        Option can be specified multiple times. The <sensor id> is a numeric
        value (sensor names are not used as some servers have multiple sensors
        with the same name). Use -v 3 option to query the <sensor ids>.
-  [-v]
+  [-v|-vv|-vvv]
        be verbose
          (no -v) .. single line output
          -v   ..... single line output with additional details for warnings
