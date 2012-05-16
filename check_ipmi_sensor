@@ -367,14 +367,14 @@ MAIN: {
 		print "------------- begin of debug output (-vvv is set): ------------\n";
 		print "  script was executed with the following parameters:\n";
 		print "    $0 ", join(' ', @ARGV_SAVE), "\n";
-		print "  check_ipmi_sensor version:";
-		print "    $check_ipmi_sensor_version";
-		print "  ipmimonitoring version:\n";
+		print "  check_ipmi_sensor version:\n";
+		print "    $check_ipmi_sensor_version\n";
+		print "  FreeIPMI version:\n";
 		print "    $ipmicommandversion\n";
-		print "  ipmimonitoring was executed with the following parameters:\n";
+		print "  FreeIPMI was executed with the following parameters:\n";
 		print "    ", join(' ', @getstatus), "\n";
-		print "  ipmimonitoring return code: $returncode\n";
-		print "  output of ipmimonitoring:\n";
+		print "  FreeIPMI return code: $returncode\n";
+		print "  output of FreeIPMI:\n";
 		print "$ipmioutput\n";
 		print "--------------------- end of debug output ---------------------\n";
     }
