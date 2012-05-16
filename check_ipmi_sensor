@@ -35,10 +35,12 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
+our $check_ipmi_sensor_version = "3.1-dev 2012-05-16";
+
 sub get_version
 {
     return <<EOT;
-check_ipmi_sensor version 3.1-dev 2012-05-03
+check_ipmi_sensor version $check_ipmi_sensor_version
 Copyright (C) 2009-2012 Thomas-Krenn.AG
 Current updates available at http://www.thomas-krenn.com/en/oss/ipmi-plugin/
 EOT
@@ -365,6 +367,8 @@ MAIN: {
 		print "------------- begin of debug output (-vvv is set): ------------\n";
 		print "  script was executed with the following parameters:\n";
 		print "    $0 ", join(' ', @ARGV_SAVE), "\n";
+		print "  check_ipmi_sensor version:";
+		print "    $check_ipmi_sensor_version";
 		print "  ipmimonitoring version:\n";
 		print "    $ipmicommandversion\n";
 		print "  ipmimonitoring was executed with the following parameters:\n";
