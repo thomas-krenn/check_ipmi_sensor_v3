@@ -2,14 +2,20 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
-Version 3.1-dev
-  * Documentation cleanups.
-
-Version 3.1rc1 20120222
-  * Reformatted code to be as close as possible to check_ipmi_sensor v2 (bash).
-  * Fetched Version 3.0 from https://github.com/zito/check_ipmi_sensor.git
-  * Moved development to git.thomas-krenn.com
-  * Added various default options.
+Version 3.1 20120524
+  Version 3.1-dev (20120312-20120508)
+    * Documentation cleanups.
+    * Added PNP4Nagios default-combinedgraph.template in contrib/ directory.
+      (was missing for 3.* version)
+    * Updated help text (-v|-vv|-vvv verbose outputs).
+    * Renamed check_ipmi_sensor.pl to check_ipmi_sensor.
+    * Added output of check_ipmi_sensor version.
+    * Added newlines to debug output  master.
+  Version 3.1rc1 20120222
+    * Reformatted code to be as close as possible to check_ipmi_sensor v2 (bash).
+    * Fetched Version 3.0 from https://github.com/zito/check_ipmi_sensor.git
+    * Moved development to git.thomas-krenn.com
+    * Added various default options.
 
 Version 3.0 20110501
   * The code rewritten using the Perl.
