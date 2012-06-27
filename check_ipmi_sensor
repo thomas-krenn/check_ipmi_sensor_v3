@@ -35,7 +35,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
-our $check_ipmi_sensor_version = "3.1 2012-05-24";
+our $check_ipmi_sensor_version = "3.2-dev 2012-06-27";
 
 sub get_version
 {
@@ -89,10 +89,11 @@ sub get_help
        caching options --quiet-cache and --sdr-cache-recreate)
   [-T <sensor type>]
        limit sensors to query based on IPMI sensor type.
-       Examples for IPMI sensor type are 'Fan', 'Temperature', 'Voltage', ...
-       See chapter '42.2 Sensor Type Codes and Data' of the IPMI 2.0 spec for a
-       full list of possible sensor types. The available types depend on your
-       particular server and the available sensors there.
+       Examples for IPMI sensor types are 'Fan', 'Temperature', 'Voltage', ...
+       See the output of the FreeIPMI command 'ipmi-sensors -L' and chapter
+       '42.2 Sensor Type Codes and Data' of the IPMI 2.0 spec for a full list
+       of possible sensor types. The available types depend on your particular
+       server and the available sensors there.
   [-x <sensor id>]
        exclude sensor matching <sensor id>. Useful for cases when unused
        sensors cannot be deleted from SDR and are reported in a non-OK state.

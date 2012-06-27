@@ -2,6 +2,9 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.2-dev 20120627
+  * Help text cleanups (hint on 'ipmi-sensors -L').
+
 Version 3.1 20120524
   Version 3.1-dev (20120312-20120508)
     * Documentation cleanups.
