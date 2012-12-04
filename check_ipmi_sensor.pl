@@ -306,31 +306,30 @@ MAIN: {
 			else{
 				$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
 			}
-    	}    		
-    }        
-    if( $abort_text ne ""){
-    	print STDOUT "Error: " . $abort_text . " missing.";
+		}
+	}
+	if( $abort_text ne ""){
+		print STDOUT "Error: " . $abort_text . " missing.";
 		print STDOUT get_usage();
 		exit(3);	
-    }    
-    # , is the seperator in the new string
-    if(@ipmi_sensor_types){
-    	 push @basecmd, '-g', join(',', @ipmi_sensor_types);    	 
-    }
-   
-    if(@freeipmi_options){
-    	push @basecmd, @freeipmi_options;
-    }
-    
-    #keep original basecmd for later usage
-    my @getstatus = @basecmd;
-    
-    #if -b is not defined, caching options are used
-    if( !(defined $freeipmi_compat) ){
-    	push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
-    }
-    #since version 0.8 it is possible to interpret OEM data
-    if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) ||
+	}
+	# , is the seperator in the new string
+	if(@ipmi_sensor_types){
+		push @basecmd, '-g', join(',', @ipmi_sensor_types);    	 
+	}
+	if(@freeipmi_options){
+		push @basecmd, @freeipmi_options;
+	}
+
+	#keep original basecmd for later usage
+	my @getstatus = @basecmd;
+
+	#if -b is not defined, caching options are used
+	if( !(defined $freeipmi_compat) ){
+		push @getstatus, '--quiet-cache', '--sdr-cache-recreate';
+	}
+	#since version 0.8 it is possible to interpret OEM data
+	if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) ||
 			$ipmi_version[0] > 0){
 				push @getstatus, '--interpret-oem-data';
 	}
@@ -341,7 +340,7 @@ MAIN: {
 	#if ipmi-sensors is used show the state of sensors an ignore N/A
 	if($ipmi_sensors){
 		push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
-	}    		
+	}
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
@@ -349,9 +348,9 @@ MAIN: {
 	my $returncode;
 	if(!$simulate){
 		run \@getstatus, '>&', \$ipmioutput;
-	    #the upper eight bits contain the error condition (exit code)
-    	#see http://perldoc.perl.org/perlvar.html#Error-Variables
-    	$returncode = $? >> 8;
+		#the upper eight bits contain the error condition (exit code)
+		#see http://perldoc.perl.org/perlvar.html#Error-Variables
+		$returncode = $? >> 8;
 	}
 	else{
 		$ipmioutput = simulate($simulate);
@@ -360,7 +359,7 @@ MAIN: {
 	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
-    if ( $verbosity == 3 ){
+	if ( $verbosity == 3 ){
 		my $ipmicommandversion;
 		run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
 		#remove trailing newline with chomp
@@ -378,24 +377,30 @@ MAIN: {
 		print "  output of FreeIPMI:\n";
 		print "$ipmioutput\n";
 		print "--------------------- end of debug output ---------------------\n";
-    }
+	}
 
 ################################################################################
 # generate main output
-    if ( $returncode != 0 ){
+	if(!defined($ipmioutput)){
+		print "-> Execution of FreeIPMI returned an empty output!\n";
+		print "-> ipmimonitoring was executed with the following parameters:\n";
+		print "   ", join(' ', @getstatus), "\n";
+		exit(3);
+	}
+	if ( $returncode != 0 ){
 		print "$ipmioutput\n";
 		print "-> Execution of ipmimonitoring failed with return code $returncode.\n";
 		print "-> ipmimonitoring was executed with the following parameters:\n";
-        print "   ", join(' ', @getstatus), "\n";
+		print "   ", join(' ', @getstatus), "\n";
 		exit(3);
-    }
-    else{
+	}
+	else{
 		#print desired filter types
 		if ( @ipmi_sensor_types ){
-	    	print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
+			print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
 		}
 		else{
-	    	print "IPMI Status: ";
+			print "IPMI Status: ";
 		}
 		#split at newlines, fetch array with lines of output
 		my @ipmioutput = split('\n', $ipmioutput);
@@ -405,12 +410,20 @@ MAIN: {
 	
 		#shift out the header as it is the first line
 		my $header = shift @ipmioutput;
+		if(!defined($header)){
+			print "$ipmioutput\n";
+			print " FreeIPMI returned an empty header map (first line)";
+			if(@ipmi_sensor_types){
+				print " FreeIPMI could not find any sensors for the given sensor type (option '-T').\n";
+			}
+			exit(3);
+		}
 		my %header;
 		for(my $i = 0; $i < @$header; $i++)
 		{
 			#assigning %header with (key from hdrmap) => $i
 			#checking at which position in the header is which key
-		    $header{$hdrmap{$header->[$i]}} = $i;
+			$header{$hdrmap{$header->[$i]}} = $i;
 		}
 	
 		my @ipmioutput2;
@@ -437,7 +450,7 @@ MAIN: {
 				$row->{'name'} =~ s/ /_/g;
 			}
 			#check for warning sensors
-	    	if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
+			if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
 				$exit = 1 if $exit < 1;
 				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
 				#don't insert a , the first time
@@ -451,8 +464,8 @@ MAIN: {
 						$w_sensors .= " ($row->{'event'})";
 					}
 				}		
-	    	}
-	    	if ( $row->{'units'} ne 'N/A' ){
+			}
+			if ( $row->{'units'} ne 'N/A' ){
 				my $val = $row->{'reading'};
 				if($zenoss){
 					$perf .= qq|$row->{'name'}=$val |;
@@ -460,7 +473,7 @@ MAIN: {
 				else{
 					$perf .= qq|'$row->{'name'}'=$val |;	
 				}				
-	    	}
+			}
 		}
 		$perf = substr($perf, 0, -1);#cut off the last chars
 		if ( $exit == 0 ){
