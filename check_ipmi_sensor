@@ -61,8 +61,9 @@ sub get_help
   -H <hostname>
        hostname or IP of the IPMI interface.
        For \"-H localhost\" the Nagios/Icinga user must be allowed to execute
-       ipmimonitoring with root privileges via sudo (ipmimonitoring must be
-       able to access the IPMI devices via the IPMI system interface).
+       ipmimonitoring/ipmi-sensors with root privileges via sudo
+       (ipmimonitoring/ipmi-sensor must be able to access the IPMI devices via
+       the IPMI system interface).
   [-f <FreeIPMI config file>]
        path to the FreeIPMI configuration file.
        Only neccessary for communication via network.
@@ -383,14 +384,14 @@ MAIN: {
 # generate main output
 	if(!defined($ipmioutput)){
 		print "-> Execution of FreeIPMI returned an empty output!\n";
-		print "-> ipmimonitoring was executed with the following parameters:\n";
+		print "-> $IPMICOMMAND was executed with the following parameters:\n";
 		print "   ", join(' ', @getstatus), "\n";
 		exit(3);
 	}
 	if ( $returncode != 0 ){
 		print "$ipmioutput\n";
-		print "-> Execution of ipmimonitoring failed with return code $returncode.\n";
-		print "-> ipmimonitoring was executed with the following parameters:\n";
+		print "-> Execution of $IPMICOMMAND failed with return code $returncode.\n";
+		print "-> $IPMICOMMAND was executed with the following parameters:\n";
 		print "   ", join(' ', @getstatus), "\n";
 		exit(3);
 	}
