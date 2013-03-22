@@ -213,6 +213,7 @@ MAIN: {
     my (@ipmi_sensor_types, @ipmi_xlist);
     my (@ipmi_version);
     my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
+	my $fan_count;#number of fans that should be installed in unit
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
@@ -232,8 +233,9 @@ MAIN: {
 		'vvv'				=> sub{$verbosity=3},
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'o|outformat=s'		=> \$ipmi_outformat,
-		's=s'					=>\$simulate,
-		'h|help'	    	=> 
+		'fc|fancount=i'		=> \$fan_count,
+		's=s'				=>\$simulate,
+		'h|help'			=> 
 			sub{print STDOUT get_version();
 				print STDOUT "\n";
 				print STDOUT get_usage();
@@ -443,8 +445,9 @@ MAIN: {
 		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
 	
 		my $exit = 0;		
-		my $w_sensors = '';#sensors with warnings		
-		my $perf = '';#performance sensor		
+		my $w_sensors = '';#sensors with warnings
+		my $perf = '';#performance sensor
+		my $curr_fans = 0;
 		
 		foreach my $row ( @ipmioutput2 ){
 			if( $zenoss ){
@@ -475,13 +478,27 @@ MAIN: {
 					$perf .= qq|'$row->{'name'}'=$val |;	
 				}				
 			}
+			if( $row->{'type'} eq 'Fan' && $row->{'reading'} ne 'N/A' ){
+				$curr_fans++;
+			}
 		}
+		#now check if num fans equals desired unit fans
+		if( $fan_count ){
+			if( $curr_fans < $fan_count ){
+				$exit = 1 if $exit < 1;
+				$w_sensors .= "FAN = Warning";
+				if( $verbosity ){
+					$w_sensors .= " ($curr_fans)" ;
+				}
+			}
+		}
+		
 		$perf = substr($perf, 0, -1);#cut off the last chars
 		if ( $exit == 0 ){
-		    print "OK";
+			print "OK";
 		}
 		elsif ( $exit == 1 ){
-		    print "Warning [$w_sensors]";
+			print "Warning [$w_sensors]";
 		}
 		else{
 			print "Critical [$w_sensors]";
@@ -493,7 +510,7 @@ MAIN: {
 	    	foreach my $row (@ipmioutput2){
 	    		if( $row->{'state'} eq 'N/A'){
 	    			next;
-	    		}	    		
+	    		}
 	    		elsif( $row->{'reading'} ne 'N/A'){
 					print "$row->{'name'} = $row->{'reading'} ";
 	    		}
@@ -504,7 +521,7 @@ MAIN: {
 	    			next;
 	    		}
 				print "(Status: $row->{'state'})\n";
-	    	}
+			}
 		}
 		exit $exit;
 	}
