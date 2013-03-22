@@ -112,6 +112,10 @@ sub get_help
        software than Nagios or Icinga.
          -o zenoss .. create ZENOSS compatible formatted output (output with
                       underscores instead of whitespaces and no single quotes)
+  [-fc <num fans>]
+       number of fans that should be active. If the number of current active
+       fans reported by IPMI is smaller than <num fans> then a Warning state
+       is returned.
   [-h]
        show this help
   [-V]
