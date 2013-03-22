@@ -486,6 +486,7 @@ MAIN: {
 		if( $fan_count ){
 			if( $curr_fans < $fan_count ){
 				$exit = 1 if $exit < 1;
+				$w_sensors .= ", " unless $w_sensors eq '';
 				$w_sensors .= "FAN = Warning";
 				if( $verbosity ){
 					$w_sensors .= " ($curr_fans)" ;
