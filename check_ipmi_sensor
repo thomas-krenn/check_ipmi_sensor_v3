@@ -8,12 +8,12 @@
 # the terms of the GNU General Public License as published by the Free Software
 # Foundation; either version 3 of the License, or (at your option) any later
 # version.
-# 
+#
 # This program is distributed in the hope that it will be useful, but WITHOUT
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
 # details.
-# 
+#
 # You should have received a copy of the GNU General Public License along with
 # this program; if not, see <http://www.gnu.org/licenses/>.
 #
@@ -116,6 +116,10 @@ sub get_help
        number of fans that should be active. If the number of current active
        fans reported by IPMI is smaller than <num fans> then a Warning state
        is returned.
+  [--fru]
+       print the product serial number if it is available in the IPMI FRU data.
+       For this purpose the tool 'ipmi-fru' is used. E.g.:
+         IPMI Status: OK (9000096781)
   [-h]
        show this help
   [-V]
@@ -171,7 +175,7 @@ sub get_ipmi_version{
 	my $ipmi_version = '';
 	@ipmi_version_output = `$IPMICOMMAND -V`;
 	$ipmi_version = shift(@ipmi_version_output);
-	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;	
+	$ipmi_version =~ /(\d+)\.(\d+)\.(\d+)/;
 	@ipmi_version_output = ();
 	push @ipmi_version_output,$1,$2,$3;
 	return @ipmi_version_output;
@@ -185,8 +189,31 @@ sub simulate{
 		print "Error: Simulation file with ipmi output not found.\n";
 		exit(3);
 	}
-	return ($output = `cat $simul_file`);	
+	return ($output = `cat $simul_file`);
 }
+
+sub get_fru{
+	my @frucmd = @{(shift)};
+	my $fru;
+	if(-e '/usr/sbin/ipmi-fru'){
+		$fru = '/usr/sbin/ipmi-fru';
+	}
+	else{
+		chomp($fru = `which ipmi-fru`);
+	}
+	$frucmd[0] = $fru;
+	#skip checksum validation
+	push @frucmd,'-s';
+	my $fruoutput;
+	my $returncode;
+	run \@frucmd, '>&', \$fruoutput;
+	#the upper eight bits contain the error condition (exit code)
+	#see http://perldoc.perl.org/perlvar.html#Error-Variables
+	$returncode = $? >> 8;
+	#TODO: React on returncode
+	return split('\n', $fruoutput);
+}
+
 
 #define entire hashes
 our %hdrmap = (
@@ -221,6 +248,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
+	my $use_fru;
 
 	#read in command line arguments and init hash variables with the given values from argv
     if ( !( GetOptions(
@@ -232,6 +260,7 @@ MAIN: {
 		'O|options=s'		=> \@freeipmi_options,
 		'b|compat'			=> \$freeipmi_compat,
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
+		'fru'				=> \$use_fru,
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
@@ -239,31 +268,31 @@ MAIN: {
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
 		's=s'				=>\$simulate,
-		'h|help'			=> 
+		'h|help'			=>
 			sub{print STDOUT get_version();
 				print STDOUT "\n";
 				print STDOUT get_usage();
 				print STDOUT "\n";
 				print STDOUT get_help();
 				exit(0)
-			},	
-		'V|version'	    	=> 
+			},
+		'V|version'	    	=>
 			sub{
 				print STDOUT get_version();
 				exit(0);
 			},
-		'usage|?'					=> 
+		'usage|?'					=>
 			sub{print STDOUT get_usage();
 				exit(3);
-			}	
+			}
 	) ) ){
 		usage(1);#call usage if GetOptions failed
 	}
 	usage(1) if @ARGV;#print usage if unknown arg list is left
-	
+
 ################################################################################
 # check for ipmimonitoring or ipmi-sensors. Since version > 0.8 ipmi-sensors is used
-# if '--legacy-output' is given ipmi-sensors cannot be used	
+# if '--legacy-output' is given ipmi-sensors cannot be used
 
 	if( $MISSING_COMMAND_TEXT ne "" ){
 		print STDOUT "Error:$MISSING_COMMAND_TEXT";
@@ -272,7 +301,7 @@ MAIN: {
 	else{
 		@ipmi_version = get_ipmi_version();
 		if( $ipmi_version[0] > 0 && (grep(/legacy\-output/,@freeipmi_options)) == 0){
-			$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;	
+			$IPMICOMMAND =~ s/ipmimonitoring/ipmi-sensors/;
 			$ipmi_sensors = 1;
 		}
 		if( $ipmi_version[0] > 0 && (grep(/legacy\-output/,@freeipmi_options)) == 1){
@@ -289,8 +318,8 @@ MAIN: {
     @freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
     @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
     @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
-    
-    #check for zenoss output    
+
+    #check for zenoss output
     if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
     	$zenoss = 1;
     }
@@ -318,11 +347,17 @@ MAIN: {
 	if( $abort_text ne ""){
 		print STDOUT "Error: " . $abort_text . " missing.";
 		print STDOUT get_usage();
-		exit(3);	
+		exit(3);
 	}
+	# copy command for fru usage
+	my @frucmd;
+	if($use_fru){
+		@frucmd = @basecmd
+	}
+
 	# , is the seperator in the new string
 	if(@ipmi_sensor_types){
-		push @basecmd, '-g', join(',', @ipmi_sensor_types);    	 
+		push @basecmd, '-g', join(',', @ipmi_sensor_types);
 	}
 	if(@freeipmi_options){
 		push @basecmd, @freeipmi_options;
@@ -364,6 +399,10 @@ MAIN: {
 		print "DEBUG: Using simulation mode\n";
 		$returncode = 0;
 	}
+	my @fruoutput;
+	if($use_fru){
+		@fruoutput = get_fru(\@frucmd);
+	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
 	if ( $verbosity == 3 ){
@@ -383,6 +422,10 @@ MAIN: {
 		print "  FreeIPMI return code: $returncode\n";
 		print "  output of FreeIPMI:\n";
 		print "$ipmioutput\n";
+		print "  output of FRU data:\n";
+		for my $line (@fruoutput){
+			print $line."\n";
+		}
 		print "--------------------- end of debug output ---------------------\n";
 	}
 
@@ -411,10 +454,10 @@ MAIN: {
 		}
 		#split at newlines, fetch array with lines of output
 		my @ipmioutput = split('\n', $ipmioutput);
-	
+
 		#remove leading and trailing whitespace characters, split at the pipe delimiter
 		@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
-	
+
 		#shift out the header as it is the first line
 		my $header = shift @ipmioutput;
 		if(!defined($header)){
@@ -432,7 +475,7 @@ MAIN: {
 			#checking at which position in the header is which key
 			$header{$hdrmap{$header->[$i]}} = $i;
 		}
-	
+
 		my @ipmioutput2;
 		foreach my $row ( @ipmioutput ){
 			my %row;
@@ -447,12 +490,12 @@ MAIN: {
 		my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
 		#filter out the desired sensor values
 		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
-	
-		my $exit = 0;		
+
+		my $exit = 0;
 		my $w_sensors = '';#sensors with warnings
 		my $perf = '';#performance sensor
 		my $curr_fans = 0;
-		
+
 		foreach my $row ( @ipmioutput2 ){
 			if( $zenoss ){
 				$row->{'name'} =~ s/ /_/g;
@@ -471,7 +514,7 @@ MAIN: {
 					else{
 						$w_sensors .= " ($row->{'event'})";
 					}
-				}		
+				}
 			}
 			if ( $row->{'units'} ne 'N/A' ){
 				my $val = $row->{'reading'};
@@ -479,8 +522,8 @@ MAIN: {
 					$perf .= qq|$row->{'name'}=$val |;
 				}
 				else{
-					$perf .= qq|'$row->{'name'}'=$val |;	
-				}				
+					$perf .= qq|'$row->{'name'}'=$val |;
+				}
 			}
 			if( $row->{'type'} eq 'Fan' && $row->{'reading'} ne 'N/A' ){
 				$curr_fans++;
@@ -497,7 +540,14 @@ MAIN: {
 				}
 			}
 		}
-		
+		#check for the FRU serial number
+		my @server_serial;
+		my $serial_number;
+		if( $use_fru ){
+			@server_serial = grep(/Product Serial Number/,@fruoutput);
+			$server_serial[0] =~ m/(\d+)/;
+			$serial_number = $1;
+		}
 		$perf = substr($perf, 0, -1);#cut off the last chars
 		if ( $exit == 0 ){
 			print "OK";
@@ -508,9 +558,12 @@ MAIN: {
 		else{
 			print "Critical [$w_sensors]";
 		}
+		if( $use_fru && defined($serial_number)){
+			print " ($serial_number)";
+		}
 		print " | ", $perf if $perf ne '';
 		print "\n";
-	
+
 		if ( $verbosity > 1 ){
 	    	foreach my $row (@ipmioutput2){
 	    		if( $row->{'state'} eq 'N/A'){
@@ -520,7 +573,7 @@ MAIN: {
 					print "$row->{'name'} = $row->{'reading'} ";
 	    		}
 	    		elsif( $row->{'event'} ne 'N/A'){
-	    			print "$row->{'name'} = $row->{'event'} ";	
+	    			print "$row->{'name'} = $row->{'event'} ";
 	    		}
 	    		else{
 	    			next;
