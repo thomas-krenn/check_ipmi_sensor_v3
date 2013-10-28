@@ -2,6 +2,12 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.2 20131028
+  * Added FRU serial number to output
+  * Add check if ipmimonitoring output is empty
+  * Print correct command in verbose output
+  * Number of fans can be compared to a desired number of fans
+
 Version 3.2-dev 20120627
   * Help text cleanups (hint on 'ipmi-sensors -L').
 
