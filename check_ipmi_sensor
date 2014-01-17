@@ -454,7 +454,10 @@ MAIN: {
 		}
 		#split at newlines, fetch array with lines of output
 		my @ipmioutput = split('\n', $ipmioutput);
-
+		
+		#remove sudo errors and warnings like they appear on dns resolving issues
+		@ipmioutput = map { /^sudo:/ ? () : $_ } @ipmioutput;
+		
 		#remove leading and trailing whitespace characters, split at the pipe delimiter
 		@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
 
