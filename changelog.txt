@@ -42,6 +42,7 @@ List of contributors to version 3.* branch:
   Werner Fischer, Thomas-Krenn.AG 
   Georg Schönberger, Thomas-Krenn.AG
   Václav Ovsík (ported version 2 to Perl)
+  Robert Heinzmann
 
 List of contributors to version 2.* branch:
   Werner Fischer, Thomas-Krenn.AG (author)
