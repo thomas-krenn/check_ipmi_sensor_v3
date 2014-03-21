@@ -431,8 +431,8 @@ MAIN: {
 
 ################################################################################
 # generate main output
-	if(!defined($ipmioutput)){
-		print "-> Execution of FreeIPMI returned an empty output!\n";
+	if(!defined($ipmioutput) || scalar(split('\n', $ipmioutput)) == 1){
+		print "-> Execution of FreeIPMI returned an empty output or only 1 header row!\n";
 		print "-> $IPMICOMMAND was executed with the following parameters:\n";
 		print "   ", join(' ', @getstatus), "\n";
 		exit(3);
