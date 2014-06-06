@@ -51,8 +51,8 @@ sub get_usage
 Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
-  [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-v|-vv|-vvv]
-  [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
+  [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-i <sensor id>]
+  [-o zenoss] [-D <protocol LAN version>] [-h] [-V] [-v|-vv|-vvv]
 EOT
 }
 sub get_help
@@ -101,6 +101,11 @@ sub get_help
        Option can be specified multiple times. The <sensor id> is a numeric
        value (sensor names are not used as some servers have multiple sensors
        with the same name). Use -v 3 option to query the <sensor ids>.
+  [-i <sensor id>]
+       include only sensor matching <sensor id>. Useful for cases whne only
+       specific sensors should be monitored. Be aware that only for the
+       specified sensor errors/warnings are generated. Use -v 3 option to query
+       the <sensor ids>.
   [-v|-vv|-vvv]
        be verbose
          (no -v) .. single line output
@@ -113,8 +118,8 @@ sub get_help
          -o zenoss .. create ZENOSS compatible formatted output (output with
                       underscores instead of whitespaces and no single quotes)
   [-D]
-      change the protocol LAN version. Per default LAN_2_0 is used as protocol
-      version if not overwritten with this option.
+       change the protocol LAN version. Per default LAN_2_0 is used as protocol
+       version if not overwritten with this option.
   [-fc <num fans>]
        number of fans that should be active. If the number of current active
        fans reported by IPMI is smaller than <num fans> then a Warning state
@@ -250,7 +255,7 @@ MAIN: {
 	my ($show_help, $show_version);
 	my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
 	my (@freeipmi_options, $freeipmi_compat);
-	my (@ipmi_sensor_types, @ipmi_xlist);
+	my (@ipmi_sensor_types, @ipmi_xlist, @ipmi_ilist);
 	my (@ipmi_version);
 	my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
 	my $fan_count;#number of fans that should be installed in unit
@@ -275,6 +280,7 @@ MAIN: {
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
 		'x|exclude=s'		=> \@ipmi_xlist,
+		'i|include=s'		=> \@ipmi_ilist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
 		'D=s'			=> \$lanVersion,
@@ -329,6 +335,7 @@ MAIN: {
 	@freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
 	@ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
+	@ipmi_ilist = split(/,/, join(',', @ipmi_ilist));
 
 	#check for zenoss output
 	if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
@@ -509,12 +516,17 @@ MAIN: {
 		my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
 		#filter out the desired sensor values
 		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
-
+		#check for an include list
+		if(@ipmi_ilist){
+			my %ipmi_ilist = map { ($_, 1) } @ipmi_ilist;
+			#only include sensors from include list
+			@ipmioutput2 = grep(exists $ipmi_ilist{$_->{'id'}}, @ipmioutput2);
+		}
+		#start with main output
 		my $exit = 0;
 		my $w_sensors = '';#sensors with warnings
 		my $perf = '';#performance sensor
 		my $curr_fans = 0;
-
 		foreach my $row ( @ipmioutput2 ){
 			if( $zenoss ){
 				$row->{'name'} =~ s/ /_/g;
