@@ -35,7 +35,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
-our $check_ipmi_sensor_version = "3.2";
+our $check_ipmi_sensor_version = "3.3";
 
 sub get_version
 {
@@ -52,7 +52,7 @@ Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
   [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-v|-vv|-vvv]
-  [-o zenoss] [-h] [-V]
+  [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
 EOT
 }
 sub get_help
@@ -112,6 +112,9 @@ sub get_help
        software than Nagios or Icinga.
          -o zenoss .. create ZENOSS compatible formatted output (output with
                       underscores instead of whitespaces and no single quotes)
+  [-D]
+      change the protocol LAN version. Per default LAN_2_0 is used as protocol
+      version if not overwritten with this option.
   [-fc <num fans>]
        number of fans that should be active. If the number of current active
        fans reported by IPMI is smaller than <num fans> then a Warning state
@@ -126,7 +129,7 @@ sub get_help
        show version information
 
 Further information about this plugin can be found at
-http://www.thomas-krenn.com/en/oss/ipmi-plugin.html
+http://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin
 
 Send email to the IPMI-plugin-user mailing list if you have questions regarding
 use of this software, to submit patches, or suggest improvements.
@@ -245,6 +248,7 @@ MAIN: {
     my (@ipmi_version);
     my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
 	my $fan_count;#number of fans that should be installed in unit
+	my $lanVersion;#if desired use a different protocol version
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
@@ -267,6 +271,7 @@ MAIN: {
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
+		'D=s'			=> \$lanVersion,
 		's=s'				=>\$simulate,
 		'h|help'			=>
 			sub{print STDOUT get_version();
@@ -379,10 +384,15 @@ MAIN: {
 	if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) && (grep(/legacy\-output/,@freeipmi_options) == 0)){
 			push @getstatus, '--legacy-output';
 	}
-	#if ipmi-sensors is used show the state of sensors an ignore N/A
+	#if ipmi-sensors is used show the state of sensors and ignore N/A
 	if($ipmi_sensors){
 		push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
 	}
+	#if not stated otherwise we use protocol lan version 2 per default
+	if(!defined($lanVersion)){
+		$lanVersion = 'LAN_2_0';
+	}
+	push @getstatus, "-D $lanVersion";
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
