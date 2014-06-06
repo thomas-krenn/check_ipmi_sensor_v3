@@ -9,6 +9,7 @@ Version 3.3 20140606
   * Use LAN protocol version 2.0 per default
   * Print empty output error only if return code was 0
   * Exit the plugin with return code 3 if fru command fails
+  * Added an include list option to only include specific sensors
 
 Version 3.2 20131028
   * Added FRU serial number to output
