@@ -441,12 +441,6 @@ MAIN: {
 
 ################################################################################
 # generate main output
-	if(!defined($ipmioutput) || scalar(split('\n', $ipmioutput)) == 1){
-		print "-> Execution of FreeIPMI returned an empty output or only 1 header row!\n";
-		print "-> $IPMICOMMAND was executed with the following parameters:\n";
-		print "   ", join(' ', @getstatus), "\n";
-		exit(3);
-	}
 	if ( $returncode != 0 ){
 		print "$ipmioutput\n";
 		print "-> Execution of $IPMICOMMAND failed with return code $returncode.\n";
@@ -455,6 +449,12 @@ MAIN: {
 		exit(3);
 	}
 	else{
+		if(!defined($ipmioutput) || scalar(split('\n', $ipmioutput)) == 1){
+			print "-> Execution of FreeIPMI returned an empty output or only 1 header row!\n";
+			print "-> $IPMICOMMAND was executed with the following parameters:\n";
+			print "   ", join(' ', @getstatus), "\n";
+			exit(3);
+		}
 		#print desired filter types
 		if ( @ipmi_sensor_types ){
 			print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
