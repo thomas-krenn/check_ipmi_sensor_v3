@@ -39,7 +39,7 @@ our $check_ipmi_sensor_version = "3.3";
 
 sub get_version
 {
-    return <<EOT;
+	return <<EOT;
 check_ipmi_sensor version $check_ipmi_sensor_version
 Copyright (C) 2009-2012 Thomas-Krenn.AG
 Current updates at http://git.thomas-krenn.com/check_ipmi_sensor_v3.git
@@ -47,7 +47,7 @@ EOT
 }
 sub get_usage
 {
-    return <<EOT;
+	return <<EOT;
 Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
@@ -57,7 +57,7 @@ EOT
 }
 sub get_help
 {
-    return <<EOT;
+	return <<EOT;
   -H <hostname>
        hostname or IP of the IPMI interface.
        For \"-H localhost\" the Nagios/Icinga user must be allowed to execute
@@ -138,19 +138,19 @@ EOT
 }
 sub usage
 {
-    my ($arg) = @_; #the list of inputs
-    my ($exitcode);
-    if ( defined $arg ){
+	my ($arg) = @_; #the list of inputs
+	my ($exitcode);
+	if ( defined $arg ){
 		if ( $arg =~ m/^\d+$/ ){
-	    	$exitcode = $arg;
+			$exitcode = $arg;
 		}
 		else{
 			print STDOUT $arg, "\n";
-	    	$exitcode = 1;
+			$exitcode = 1;
 		}
-    }
-    print STDOUT get_usage();
-    exit($exitcode) if defined $exitcode;
+	}
+	print STDOUT get_usage();
+	exit($exitcode) if defined $exitcode;
 }
 ################################################################################
 # set ipmimonitoring path
@@ -239,14 +239,14 @@ our %hdrmap = (
 our $verbosity = 0;
 
 MAIN: {
-    $| = 1; #force a flush after every write or print
-    my @ARGV_SAVE = @ARGV;#keep args for verbose output
-    my ($show_help, $show_version);
-    my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
-    my (@freeipmi_options, $freeipmi_compat);
-    my (@ipmi_sensor_types, @ipmi_xlist);
-    my (@ipmi_version);
-    my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
+	$| = 1; #force a flush after every write or print
+	my @ARGV_SAVE = @ARGV;#keep args for verbose output
+	my ($show_help, $show_version);
+	my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
+	my (@freeipmi_options, $freeipmi_compat);
+	my (@ipmi_sensor_types, @ipmi_xlist);
+	my (@ipmi_version);
+	my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
 	my $fan_count;#number of fans that should be installed in unit
 	my $lanVersion;#if desired use a different protocol version
 	my $abort_text = '';
@@ -255,8 +255,8 @@ MAIN: {
 	my $use_fru;
 
 	#read in command line arguments and init hash variables with the given values from argv
-    if ( !( GetOptions(
-    	'H|host=s'	    	=> \$ipmi_host,#the pipe states an list of possible option names
+	if ( !( GetOptions(
+		'H|host=s'	    	=> \$ipmi_host,#the pipe states an list of possible option names
 		'f|config-file=s'	=> \$ipmi_config_file,#the backslash inits the variable with the given argument
 		'U|user=s'	    	=> \$ipmi_user,
 		'P|password=s'  	=> \$ipmi_password,
@@ -320,29 +320,29 @@ MAIN: {
 	#\s defines any whitespace characters
 	#first join the list, then split it at whitespace ' '
 	#also cf. http://perldoc.perl.org/Getopt/Long.html#Options-with-multiple-values
-    @freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
-    @ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
-    @ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
+	@freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
+	@ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
+	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
 
-    #check for zenoss output
-    if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
-    	$zenoss = 1;
-    }
+	#check for zenoss output
+	if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
+		$zenoss = 1;
+	}
 
-    my @basecmd; #variable for command to call ipmi
-    if( !(defined $ipmi_host) ){
-    	$abort_text= $abort_text . " -H <hostname>"
-    }
-    else{
-    	if( $ipmi_host eq 'localhost' ){
-    		@basecmd = ('sudo', $IPMICOMMAND);
-    	}
-    	else{
-    		if(defined $ipmi_config_file){
-    			@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
-    		}
-    		elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
-	    		@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level)
+	my @basecmd; #variable for command to call ipmi
+	if( !(defined $ipmi_host) ){
+		$abort_text= $abort_text . " -H <hostname>"
+	}
+	else{
+		if( $ipmi_host eq 'localhost' ){
+			@basecmd = ('sudo', $IPMICOMMAND);
+		}
+		else{
+			if(defined $ipmi_config_file){
+				@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
+			}
+			elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
+				@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level)
 			}
 			else{
 				$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
@@ -578,24 +578,22 @@ MAIN: {
 		print "\n";
 
 		if ( $verbosity > 1 ){
-	    	foreach my $row (@ipmioutput2){
-	    		if( $row->{'state'} eq 'N/A'){
-	    			next;
-	    		}
-	    		elsif( $row->{'reading'} ne 'N/A'){
+			foreach my $row (@ipmioutput2){
+				if( $row->{'state'} eq 'N/A'){
+					next;
+				}
+				elsif( $row->{'reading'} ne 'N/A'){
 					print "$row->{'name'} = $row->{'reading'} ";
-	    		}
-	    		elsif( $row->{'event'} ne 'N/A'){
-	    			print "$row->{'name'} = $row->{'event'} ";
-	    		}
-	    		else{
-	    			next;
-	    		}
+				}
+				elsif( $row->{'event'} ne 'N/A'){
+					print "$row->{'name'} = $row->{'event'} ";
+				}
+				else{
+					next;
+				}
 				print "(Status: $row->{'state'})\n";
 			}
 		}
 		exit $exit;
 	}
 };
-
-# vim:ai:sw=4:sts=4:
