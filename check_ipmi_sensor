@@ -213,7 +213,13 @@ sub get_fru{
 	#the upper eight bits contain the error condition (exit code)
 	#see http://perldoc.perl.org/perlvar.html#Error-Variables
 	$returncode = $? >> 8;
-	#TODO: React on returncode
+	if ( $returncode != 0 ){
+		print "$fruoutput\n";
+		print "-> Execution of $fru failed with return code $returncode.\n";
+		print "-> $fru was executed with the following parameters:\n";
+		print "   ", join(' ', @frucmd), "\n";
+		exit(3);
+	}
 	return split('\n', $fruoutput);
 }
 
