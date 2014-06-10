@@ -134,15 +134,15 @@ sub get_help
        show version information
 
 Examples:
-  $ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user 
+  \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user 
     IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
     'FAN 1'=2775.00 [...]
-  $ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -x 205
+  \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -x 205
     IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00 
     'FAN 2'=2775.00 [...]
-    $ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4,71
+  \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4,71
     IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
-  $ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -fru -i 4
+  \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -fru -i 4
     IPMI Status: OK (0000012345) | 'System Temp'=30.00
 
 Further information about this plugin can be found at
