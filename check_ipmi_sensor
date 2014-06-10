@@ -102,7 +102,7 @@ sub get_help
        value (sensor names are not used as some servers have multiple sensors
        with the same name). Use -v 3 option to query the <sensor ids>.
   [-i <sensor id>]
-       include only sensor matching <sensor id>. Useful for cases whne only
+       include only sensor matching <sensor id>. Useful for cases when only
        specific sensors should be monitored. Be aware that only for the
        specified sensor errors/warnings are generated. Use -v 3 option to query
        the <sensor ids>.
@@ -142,7 +142,7 @@ Examples:
     'FAN 2'=2775.00 [...]
   \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4,71
     IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
-  \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -fru -i 4
+  \$ check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4 --fru
     IPMI Status: OK (0000012345) | 'System Temp'=30.00
 
 Further information about this plugin can be found at
