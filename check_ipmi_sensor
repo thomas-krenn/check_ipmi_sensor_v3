@@ -417,7 +417,9 @@ MAIN: {
 	if(!defined($lanVersion)){
 		$lanVersion = 'LAN_2_0';
 	}
-	push @getstatus, "--driver-type=$lanVersion";
+	if($lanVersion ne 'default'){
+		push @getstatus, "--driver-type=$lanVersion";
+	}
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
