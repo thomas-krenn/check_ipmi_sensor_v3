@@ -2,6 +2,10 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.4 20140929
+  * Fix implicit array warning with split
+  * Add option to disable LAN protocol version 2.0
+
 Version 3.3 20140606
   * Print a warning if ipmi-sensors only returned a single output row
   * Ignore sudo errors and warnings in IPMI command output 
