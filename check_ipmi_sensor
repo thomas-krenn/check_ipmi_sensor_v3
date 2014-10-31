@@ -35,7 +35,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
-our $check_ipmi_sensor_version = "3.4";
+our $check_ipmi_sensor_version = "3.5";
 
 sub get_version
 {
@@ -417,7 +417,7 @@ MAIN: {
 	if(!defined($lanVersion)){
 		$lanVersion = 'LAN_2_0';
 	}
-	if($lanVersion ne 'default'){
+	if($lanVersion ne 'default' && $ipmi_host ne 'localhost'){
 		push @getstatus, "--driver-type=$lanVersion";
 	}
 
