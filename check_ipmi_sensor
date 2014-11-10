@@ -221,7 +221,13 @@ sub get_fru{
 	else{
 		chomp($fru = `which ipmi-fru`);
 	}
-	$frucmd[0] = $fru;
+	#on localhost sudo is used
+	if($frucmd[0] eq 'sudo'){
+		$frucmd[1] = $fru;
+	}
+	else{
+		$frucmd[0] = $fru;	
+	}
 	#skip checksum validation
 	push @frucmd,'-s';
 	my $fruoutput;
