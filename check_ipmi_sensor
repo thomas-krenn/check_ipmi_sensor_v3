@@ -600,8 +600,10 @@ MAIN: {
 		my $serial_number;
 		if( $use_fru ){
 			@server_serial = grep(/Product Serial Number/,@fruoutput);
-			$server_serial[0] =~ m/(\d+)/;
-			$serial_number = $1;
+			if(@server_serial){
+				$server_serial[0] =~ m/(\d+)/;
+				$serial_number = $1;
+			}
 		}
 		$perf = substr($perf, 0, -1);#cut off the last chars
 		if ( $exit == 0 ){
