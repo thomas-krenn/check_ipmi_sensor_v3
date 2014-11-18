@@ -303,7 +303,8 @@ sub parse_sel{
 	foreach my $row (@seloutput){
 		my %curr_row;
 		for(my $i = 0; $i < scalar(@{$header}); $i++){
-			$curr_row{$header->[$i]} = $row->[$i];
+			my $key = lc $header->[$i];
+			$curr_row{$key} = $row->[$i];
 		}
 		push @sel_rows, \%curr_row;
 	}
@@ -510,7 +511,7 @@ MAIN: {
 	if($use_fru){
 		@fruoutput = get_fru(\@frucmd, $verbosity);
 	}
-	my @seloutput = parse_sel(\@selcmd, $verbosity);
+	my $seloutput = parse_sel(\@selcmd, $verbosity);
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
 	if ( $verbosity == 3 ){
@@ -643,6 +644,22 @@ MAIN: {
 			}
 			if( $row->{'type'} eq 'Fan' && $row->{'reading'} ne 'N/A' ){
 				$curr_fans++;
+			}
+		}
+		foreach my $row (@{$seloutput}){
+			if( $zenoss ){
+				$row->{'name'} =~ s/ /_/g;
+			}
+			if ($row->{'state'} ne 'Nominal'){
+				$exit = 1 if $exit < 1;
+				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
+				$w_sensors .= ", " unless $w_sensors eq '';
+				$w_sensors .= "$row->{'name'} = $row->{'state'}";
+				if( $verbosity ){
+					if(defined($row->{'type'})){
+						$w_sensors .= " ($row->{'type'})" ;
+					}
+				}
 			}
 		}
 		#now check if num fans equals desired unit fans
