@@ -280,12 +280,12 @@ sub parse_sel{
 	my $selcmd = shift;
 	my @seloutput = get_sel($selcmd);
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
-	my @header = shift(@seloutput);
+	my $header = shift(@seloutput);
 	my @sel_rows;
 	foreach my $row (@seloutput){
 		my %curr_row;
-		for(my $i = 0; $i < scalar(@header); $i++){
-			$curr_row{$header[$i]} = $row->[$i];
+		for(my $i = 0; $i < scalar(@{$header}); $i++){
+			$curr_row{$header->[$i]} = $row->[$i];
 		}
 		push @sel_rows, \%curr_row;
 	}
