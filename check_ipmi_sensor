@@ -245,8 +245,11 @@ sub get_fru{
 		exit(3);
 	}
 	if($verbosity == 3){
+		print "------------- debug output for fru (-vvv is set): ------------\n";
 		print "  $fru was executed with the following parameters:\n";
 		print "    ", join(' ', @frucmd), "\n";
+		print "  output of FreeIPMI:\n";
+		print "$fruoutput";
 	}
 	return split('\n', $fruoutput);
 }
@@ -281,15 +284,19 @@ sub get_sel{
 		exit(3);
 	}
 	if($verbosity == 3){
+		print "------------- debug output for sel (-vvv is set): ------------\n";
 		print "  $sel was executed with the following parameters:\n";
 		print "    ", join(' ', @selcmd), "\n";
+		print "  output of FreeIPMI:\n";
+		print "$seloutput";
 	}
 	return split('\n', $seloutput);
 }
 
 sub parse_sel{
 	my $selcmd = shift;
-	my @seloutput = get_sel($selcmd);
+	my $verbosity = shift;
+	my @seloutput = get_sel($selcmd, $verbosity);
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
 	my @sel_rows;
@@ -523,10 +530,6 @@ MAIN: {
 		print "  FreeIPMI return code: $returncode\n";
 		print "  output of FreeIPMI:\n";
 		print "$ipmioutput\n";
-		print "  output of FRU data:\n";
-		for my $line (@fruoutput){
-			print $line."\n";
-		}
 		print "--------------------- end of debug output ---------------------\n";
 	}
 
