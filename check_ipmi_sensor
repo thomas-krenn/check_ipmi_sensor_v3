@@ -246,6 +246,35 @@ sub get_fru{
 	return split('\n', $fruoutput);
 }
 
+sub get_sel{
+	my @selcmd = @{(shift)};
+	my $sel;
+	if(-e '/usr/sbin/ipmi-sel'){
+		$sel = '/usr/sbin/ipmi-sel';
+	}
+	else{
+		chomp($sel = `which ipmi-fru`);
+	}
+	#on localhost sudo is used
+	if($selcmd[0] eq 'sudo'){
+		$selcmd[1] = $sel;
+	}
+	else{
+		$selcmd[0] = $sel;
+	}
+	my $seloutput;
+	my $returncode;
+	run \@selcmd, '>&', \$seloutput;
+	$returncode = $? >> 8;
+	if ( $returncode != 0 ){
+		print "$seloutput\n";
+		print "-> Execution of $sel failed with return code $returncode.\n";
+		print "-> $sel was executed with the following parameters:\n";
+		print "   ", join(' ', @selcmd), "\n";
+		exit(3);
+	}
+	return split('\n', $seloutput);
+}
 
 #define entire hashes
 our %hdrmap = (
