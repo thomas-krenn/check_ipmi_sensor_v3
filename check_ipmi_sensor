@@ -214,6 +214,7 @@ sub simulate{
 
 sub get_fru{
 	my @frucmd = @{(shift)};
+	my $verbosity = shift;
 	my $fru;
 	if(-e '/usr/sbin/ipmi-fru'){
 		$fru = '/usr/sbin/ipmi-fru';
@@ -243,11 +244,16 @@ sub get_fru{
 		print "   ", join(' ', @frucmd), "\n";
 		exit(3);
 	}
+	if($verbosity == 3){
+		print "  $fru was executed with the following parameters:\n";
+		print "    ", join(' ', @frucmd), "\n";
+	}
 	return split('\n', $fruoutput);
 }
 
 sub get_sel{
 	my @selcmd = @{(shift)};
+	my $verbosity = shift;
 	my $sel;
 	if(-e '/usr/sbin/ipmi-sel'){
 		$sel = '/usr/sbin/ipmi-sel';
@@ -262,6 +268,7 @@ sub get_sel{
 	else{
 		$selcmd[0] = $sel;
 	}
+	push @selcmd, '--output-event-state', '--interpret-oem-data', '--entity-sensor-names';
 	my $seloutput;
 	my $returncode;
 	run \@selcmd, '>&', \$seloutput;
@@ -272,6 +279,10 @@ sub get_sel{
 		print "-> $sel was executed with the following parameters:\n";
 		print "   ", join(' ', @selcmd), "\n";
 		exit(3);
+	}
+	if($verbosity == 3){
+		print "  $sel was executed with the following parameters:\n";
+		print "    ", join(' ', @selcmd), "\n";
 	}
 	return split('\n', $seloutput);
 }
@@ -490,9 +501,9 @@ MAIN: {
 	}
 	my @fruoutput;
 	if($use_fru){
-		@fruoutput = get_fru(\@frucmd);
+		@fruoutput = get_fru(\@frucmd, $verbosity);
 	}
-	my @seloutput = parse_sel(\@selcmd);
+	my @seloutput = parse_sel(\@selcmd, $verbosity);
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
 	if ( $verbosity == 3 ){
