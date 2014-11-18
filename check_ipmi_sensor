@@ -519,7 +519,7 @@ MAIN: {
 		run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
 		#remove trailing newline with chomp
 		chomp $ipmicommandversion;
-		print "------------- begin of debug output (-vvv is set): ------------\n";
+		print "------------- debug output for sensors (-vvv is set): ------------\n";
 		print "  script was executed with the following parameters:\n";
 		print "    $0 ", join(' ', @ARGV_SAVE), "\n";
 		print "  check_ipmi_sensor version:\n";
