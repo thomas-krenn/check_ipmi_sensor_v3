@@ -276,6 +276,22 @@ sub get_sel{
 	return split('\n', $seloutput);
 }
 
+sub parse_sel{
+	my $selcmd = shift;
+	my @seloutput = get_sel($selcmd);
+	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
+	my @header = shift(@seloutput);
+	my @sel_rows;
+	foreach my $row (@seloutput){
+		my %curr_row;
+		for(my $i = 0; $i < scalar(@header); $i++){
+			$curr_row{$header[$i]} = $row->[$i];
+		}
+		push @sel_rows, \%curr_row;
+	}
+	return \@sel_rows;
+}
+
 #define entire hashes
 our %hdrmap = (
 	'Record_ID'		=> 'id',	# FreeIPMI ...,0.7.x
@@ -419,6 +435,7 @@ MAIN: {
 	if($use_fru){
 		@frucmd = @basecmd
 	}
+	my @selcmd = @basecmd;
 
 	# , is the seperator in the new string
 	if(@ipmi_sensor_types){
@@ -475,6 +492,7 @@ MAIN: {
 	if($use_fru){
 		@fruoutput = get_fru(\@frucmd);
 	}
+	my @seloutput = parse_sel(\@selcmd);
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
 	if ( $verbosity == 3 ){
