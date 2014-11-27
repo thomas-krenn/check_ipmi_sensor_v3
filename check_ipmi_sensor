@@ -128,6 +128,8 @@ sub get_help
        print the product serial number if it is available in the IPMI FRU data.
        For this purpose the tool 'ipmi-fru' is used. E.g.:
          IPMI Status: OK (9000096781)
+  [--nosel]
+       turn off system event log checking via ipmi-sel.
   [-h]
        show this help
   [-V]
@@ -345,7 +347,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
-	my $use_fru;
+	my ($use_fru, $no_sel);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -358,6 +360,7 @@ MAIN: {
 		'b|compat'			=> \$freeipmi_compat,
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
 		'fru'				=> \$use_fru,
+		'nosel'				=> \$no_sel,
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
@@ -511,7 +514,10 @@ MAIN: {
 	if($use_fru){
 		@fruoutput = get_fru(\@frucmd, $verbosity);
 	}
-	my $seloutput = parse_sel(\@selcmd, $verbosity);
+	my $seloutput;
+	if(!$no_sel){
+		$seloutput = parse_sel(\@selcmd, $verbosity);
+	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
 	if ( $verbosity == 3 ){
