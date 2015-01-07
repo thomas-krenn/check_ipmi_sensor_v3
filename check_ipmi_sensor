@@ -264,7 +264,7 @@ sub get_sel{
 		$sel = '/usr/sbin/ipmi-sel';
 	}
 	else{
-		chomp($sel = `which ipmi-fru`);
+		chomp($sel = `which ipmi-sel`);
 	}
 	#on localhost sudo is used
 	if($selcmd[0] eq 'sudo'){
