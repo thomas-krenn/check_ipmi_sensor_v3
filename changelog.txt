@@ -2,6 +2,9 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.7 20150211
+  * Add LAN driver LAN_2_0 to ipmi-sel and ipmi-fru
+
 Version 3.6 20150107
   * Fix ipmi calls on localhost with sudo
   * Monitor ipmi system event log with ipmi-sel

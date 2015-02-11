@@ -35,7 +35,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
-our $check_ipmi_sensor_version = "3.6";
+our $check_ipmi_sensor_version = "3.7";
 
 sub get_version
 {
@@ -118,8 +118,9 @@ sub get_help
          -o zenoss .. create ZENOSS compatible formatted output (output with
                       underscores instead of whitespaces and no single quotes)
   [-D]
-       change the protocol LAN version. Per default LAN_2_0 is used as protocol
-       version if not overwritten with this option.
+       change the protocol LAN version. Normally LAN_2_0 is used as protocol
+       version if not overwritten with this option. Use 'default' here if you
+       don't want to use LAN_2_0.
   [-fc <num fans>]
        number of fans that should be active. If the number of current active
        fans reported by IPMI is smaller than <num fans> then a Warning state
