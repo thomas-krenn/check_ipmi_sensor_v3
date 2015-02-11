@@ -493,6 +493,12 @@ MAIN: {
 	}
 	if($lanVersion ne 'default' && $ipmi_host ne 'localhost'){
 		push @getstatus, "--driver-type=$lanVersion";
+		if(!$no_sel){
+			push @selcmd, "--driver-type=$lanVersion";
+		}
+		if($use_fru){
+			push @frucmd, "--driver-type=$lanVersion";
+		}
 	}
 
 ################################################################################
