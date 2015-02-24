@@ -192,7 +192,7 @@ elsif (-x "/usr/local/bin/ipmimonitoring"){
 	$IPMICOMMAND = "/usr/local/bin/ipmimonitoring";
 }
 else{
-	$MISSING_COMMAND_TEXT = " ipmimonitoring command not found";
+	$MISSING_COMMAND_TEXT = " ipmimonitoring/ipmi-sensors command not found!\n";
 }
 
 # Identify the version of the ipmi-tool
@@ -440,22 +440,26 @@ MAIN: {
 			@basecmd = ('sudo', $IPMICOMMAND);
 		}
 	}
+	# If we are not local, we need authentication credentials
+	else{
+		if(defined $ipmi_config_file){
+			push @basecmd, '--config-file', $ipmi_config_file;
+		}
+		elsif(defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
+			push @basecmd, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level;
+		}
+		else{
+			$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
+		}
+		if( $abort_text ne ""){
+			print STDOUT "Error: " . $abort_text . " missing.";
+			print STDOUT get_usage();
+			exit(3);
+		}
+	}
+	# Add the ipmi desired host
 	if(defined $ipmi_host){
 		push @basecmd, '-h', $ipmi_host;
-	}
-	if(defined $ipmi_config_file){
-		push @basecmd, '--config-file', $ipmi_config_file;
-	}
-	elsif(defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
-		push @basecmd, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level;
-	}
-	else{
-		$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
-	}
-	if( $abort_text ne ""){
-		print STDOUT "Error: " . $abort_text . " missing.";
-		print STDOUT get_usage();
-		exit(3);
 	}
 	# copy command for fru usage
 	my @frucmd;
