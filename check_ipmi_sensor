@@ -228,7 +228,7 @@ sub get_fru{
 	else{
 		chomp($fru = `which ipmi-fru`);
 	}
-	#on localhost sudo is used
+	#if sudo is used the command is the second element
 	if($frucmd[0] eq 'sudo'){
 		$frucmd[1] = $fru;
 	}
@@ -270,7 +270,7 @@ sub get_sel{
 	else{
 		chomp($sel = `which ipmi-sel`);
 	}
-	#on localhost sudo is used
+	#if sudo is used the command is the second element
 	if($selcmd[0] eq 'sudo'){
 		$selcmd[1] = $sel;
 	}
