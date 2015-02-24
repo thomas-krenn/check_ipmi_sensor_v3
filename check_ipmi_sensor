@@ -51,8 +51,9 @@ sub get_usage
 Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
-  [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>] [-i <sensor id>]
-  [-o zenoss] [-D <protocol LAN version>] [-h] [-V] [-v|-vv|-vvv]
+  [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>]
+  [-i <sensor id>] [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
+  [-v|-vv|-vvv]
 EOT
 }
 sub get_help
