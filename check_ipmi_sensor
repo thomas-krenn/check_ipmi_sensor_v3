@@ -333,6 +333,12 @@ our %hdrmap = (
 	'Sensor Reading'	=> 'reading',
 	'Reading'		=> 'reading',	# FreeIPMI 0.8.x
 	'Event'			=> 'event',	# FreeIPMI 0.8.x
+	'Lower C'			=> 'lowerC',
+	'Lower NC'			=> 'lowerNC',
+	'Upper C'			=> 'upperC',
+	'Upper NC'			=> 'upperNC',
+	'Lower NR'			=> 'lowerNR',
+	'Upper NR'			=> 'upperNR',
 );
 
 our $verbosity = 0;
@@ -616,7 +622,6 @@ MAIN: {
 			#checking at which position in the header is which key
 			$header{$hdrmap{$header->[$i]}} = $i;
 		}
-
 		my @ipmioutput2;
 		foreach my $row ( @ipmioutput ){
 			my %row;
@@ -664,12 +669,43 @@ MAIN: {
 			}
 			if ( $row->{'units'} ne 'N/A' ){
 				my $val = $row->{'reading'};
+				my $perf_data;
+				my $perf_thresholds;
 				if($zenoss){
-					$perf .= qq|$row->{'name'}=$val |;
+					$perf_data = $row->{'name'}."=".$val;
 				}
 				else{
-					$perf .= qq|'$row->{'name'}'=$val |;
+					$perf_data = "'".$row->{'name'}."'=".$val;
 				}
+				if($use_thresholds){
+					if(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} ne 'N/A')){
+						$perf_thresholds = $row->{'lowerNC'}.":".$row->{'upperNC'}.";";
+					}
+					elsif(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} eq 'N/A')){
+						$perf_thresholds = $row->{'lowerNC'}.":;";
+					}
+					elsif(($row->{'lowerNC'} eq 'N/A') && ($row->{'upperNC'} ne 'N/A')){
+						$perf_thresholds = "~:".$row->{'upperNC'}.";";
+					}
+					elsif(($row->{'lowerNC'} eq 'N/A') && ($row->{'upperNC'} eq 'N/A')){
+						$perf_thresholds = ";";
+					}
+					if(($row->{'lowerC'} ne 'N/A') && ($row->{'upperC'} ne 'N/A')){
+						$perf_thresholds .= $row->{'lowerC'}.":".$row->{'upperC'};
+					}
+					elsif(($row->{'lowerC'} ne 'N/A') && ($row->{'upperC'} eq 'N/A')){
+						$perf_thresholds .= $row->{'lowerC'}.":";
+					}
+					elsif(($row->{'lowerC'} eq 'N/A') && ($row->{'upperC'} ne 'N/A')){
+						$perf_thresholds .= "~:".$row->{'upperC'};
+					}
+					# Add thresholds to performance data
+					if(($row->{'lowerNC'} ne 'N/A') || ($row->{'upperNC'} ne 'N/A') ||
+					($row->{'lowerC'} ne 'N/A') || ($row->{'upperC'} ne 'N/A')){
+						$perf_data .= ";".$perf_thresholds;
+					}
+				}
+				$perf .= $perf_data." ";
 			}
 			if( $row->{'type'} eq 'Fan' && $row->{'reading'} ne 'N/A' ){
 				$curr_fans++;
