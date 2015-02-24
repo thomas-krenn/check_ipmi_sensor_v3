@@ -59,12 +59,12 @@ EOT
 sub get_help
 {
 	return <<EOT;
-  -H <hostname>
+  [-H <hostname>]
        hostname or IP of the IPMI interface.
-       For \"-H localhost\" the Nagios/Icinga user must be allowed to execute
-       ipmimonitoring/ipmi-sensors with root privileges via sudo
-       (ipmimonitoring/ipmi-sensor must be able to access the IPMI devices via
-       the IPMI system interface).
+       For \"-H localhost\" or if no host is specified (local computer) the
+       Nagios/Icinga user must be allowed to run ipmimonitoring/ipmi-sensors
+       with root privileges or via sudo (ipmimonitoring/ipmi-sensor must be
+       able to access the IPMI devices via the IPMI system interface).
   [-f <FreeIPMI config file>]
        path to the FreeIPMI configuration file.
        Only neccessary for communication via network.
@@ -101,7 +101,7 @@ sub get_help
        sensors cannot be deleted from SDR and are reported in a non-OK state.
        Option can be specified multiple times. The <sensor id> is a numeric
        value (sensor names are not used as some servers have multiple sensors
-       with the same name). Use -v 3 option to query the <sensor ids>.
+       with the same name). Use -vvv option to query the <sensor ids>.
   [-i <sensor id>]
        include only sensor matching <sensor id>. Useful for cases when only
        specific sensors should be monitored. Be aware that only for the
@@ -132,6 +132,8 @@ sub get_help
          IPMI Status: OK (9000096781)
   [--nosel]
        turn off system event log checking via ipmi-sel.
+  [--nosudo]
+       turn off sudo usage on localhost or if ipmi host is ommited.
   [-h]
        show this help
   [-V]
