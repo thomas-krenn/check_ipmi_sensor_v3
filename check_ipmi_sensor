@@ -442,6 +442,8 @@ MAIN: {
 	}
 	# If we are not local, we need authentication credentials
 	else{
+		# Add the ipmi desired host
+		push @basecmd, '-h', $ipmi_host;
 		if(defined $ipmi_config_file){
 			push @basecmd, '--config-file', $ipmi_config_file;
 		}
@@ -456,10 +458,6 @@ MAIN: {
 			print STDOUT get_usage();
 			exit(3);
 		}
-	}
-	# Add the ipmi desired host
-	if(defined $ipmi_host){
-		push @basecmd, '-h', $ipmi_host;
 	}
 	# copy command for fru usage
 	my @frucmd;
