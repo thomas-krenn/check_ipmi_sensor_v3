@@ -351,7 +351,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $no_sudo);
+	my ($use_fru, $no_sel, $no_sudo, $use_thresholds);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -400,7 +400,6 @@ MAIN: {
 ################################################################################
 # check for ipmimonitoring or ipmi-sensors. Since version > 0.8 ipmi-sensors is used
 # if '--legacy-output' is given ipmi-sensors cannot be used
-
 	if( $MISSING_COMMAND_TEXT ne "" ){
 		print STDOUT "Error:$MISSING_COMMAND_TEXT";
 		exit(3);
@@ -415,8 +414,16 @@ MAIN: {
 			print "Error: Cannot use ipmi-sensors with option \'--legacy-output\'. Remove it to work correctly.\n";
 			exit(3);
 		}
+		# check if output-sensor-thresholds can be used, this is supported
+		# since 1.2.1. Version 1.2.0 was not released, so skip the third minor
+		# version number
+		if($ipmi_version[0] > 1 || ($ipmi_version[0] == 1 && $ipmi_version[1] >= 2)){
+			$use_thresholds = 1;
+		}
+		else{
+			$use_thresholds = 0;
+		}
 	}
-
 ###############################################################################
 # verify if all mandatory parameters are set and initialize various variables
 	#\s defines any whitespace characters
