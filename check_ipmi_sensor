@@ -349,7 +349,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel);
+	my ($use_fru, $no_sel, $no_sudo);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -363,6 +363,7 @@ MAIN: {
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
 		'fru'				=> \$use_fru,
 		'nosel'				=> \$no_sel,
+		'nosudo'			=> \$no_sudo,
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
@@ -430,24 +431,26 @@ MAIN: {
 	}
 
 	my @basecmd; #variable for command to call ipmi
-	if( !(defined $ipmi_host) ){
-		$abort_text= $abort_text . " -H <hostname>"
-	}
-	else{
-		if( $ipmi_host eq 'localhost' ){
+	# If host is omitted localhost is assumed, if not turned off sudo is used
+	if(!(defined $ipmi_host) || ($ipmi_host eq 'localhost')){
+		if(!defined($no_sudo)){
 			@basecmd = ('sudo', $IPMICOMMAND);
 		}
 		else{
-			if(defined $ipmi_config_file){
-				@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '--config-file', $ipmi_config_file);
-			}
-			elsif ( defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
-				@basecmd = ($IPMICOMMAND, '-h', $ipmi_host, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level)
-			}
-			else{
-				$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
-			}
+			@basecmd = ($IPMICOMMAND);
 		}
+	}
+	if(defined $ipmi_host){
+		push @basecmd, '-h', $ipmi_host;
+	}
+	if(defined $ipmi_config_file){
+		push @basecmd, '--config-file', $ipmi_config_file;
+	}
+	elsif(defined $ipmi_user && defined $ipmi_password && defined $ipmi_privilege_level ){
+		push @basecmd, '-u', $ipmi_user, '-p', $ipmi_password, '-l', $ipmi_privilege_level;
+	}
+	else{
+		$abort_text = $abort_text . " -f <FreeIPMI config file> or -U <username> -P <password> -L <privilege level>";
 	}
 	if( $abort_text ne ""){
 		print STDOUT "Error: " . $abort_text . " missing.";
@@ -493,7 +496,7 @@ MAIN: {
 	if(!defined($lanVersion)){
 		$lanVersion = 'LAN_2_0';
 	}
-	if($lanVersion ne 'default' && $ipmi_host ne 'localhost'){
+	if($lanVersion ne 'default' && defined $ipmi_host && $ipmi_host ne 'localhost'){
 		push @getstatus, "--driver-type=$lanVersion";
 		if(!$no_sel){
 			push @selcmd, "--driver-type=$lanVersion";
