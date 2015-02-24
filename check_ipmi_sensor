@@ -134,6 +134,8 @@ sub get_help
        turn off system event log checking via ipmi-sel.
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
+  [--nothresholds]
+       turn off performance data thresholds from output-sensor-thresholds.
   [-h]
        show this help
   [-V]
@@ -357,7 +359,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $no_sudo, $use_thresholds);
+	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -372,6 +374,7 @@ MAIN: {
 		'fru'				=> \$use_fru,
 		'nosel'				=> \$no_sel,
 		'nosudo'			=> \$no_sudo,
+		'nothresholds'			=> \$no_thresholds,
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
@@ -520,7 +523,7 @@ MAIN: {
 			push @frucmd, "--driver-type=$lanVersion";
 		}
 	}
-	if($use_thresholds){
+	if($use_thresholds && !$no_thresholds){
 		push @getstatus, '--output-sensor-thresholds';
 	}
 
@@ -677,7 +680,7 @@ MAIN: {
 				else{
 					$perf_data = "'".$row->{'name'}."'=".$val;
 				}
-				if($use_thresholds){
+				if($use_thresholds && !$no_thresholds){
 					if(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} ne 'N/A')){
 						$perf_thresholds = $row->{'lowerNC'}.":".$row->{'upperNC'}.";";
 					}
