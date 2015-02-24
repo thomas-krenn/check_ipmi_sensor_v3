@@ -514,6 +514,9 @@ MAIN: {
 			push @frucmd, "--driver-type=$lanVersion";
 		}
 	}
+	if($use_thresholds){
+		push @getstatus, '--output-sensor-thresholds';
+	}
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
