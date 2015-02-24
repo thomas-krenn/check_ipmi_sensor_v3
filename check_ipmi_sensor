@@ -353,9 +353,9 @@ MAIN: {
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
-		'H|host=s'	    	=> \$ipmi_host,#the pipe states an list of possible option names
-		'f|config-file=s'	=> \$ipmi_config_file,#the backslash inits the variable with the given argument
-		'U|user=s'	    	=> \$ipmi_user,
+		'H|host=s'			=> \$ipmi_host,
+		'f|config-file=s'	=> \$ipmi_config_file,
+		'U|user=s'			=> \$ipmi_user,
 		'P|password=s'  	=> \$ipmi_password,
 		'L|privilege-level=s'	=> \$ipmi_privilege_level,
 		'O|options=s'		=> \@freeipmi_options,
@@ -370,7 +370,7 @@ MAIN: {
 		'i|include=s'		=> \@ipmi_ilist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
-		'D=s'			=> \$lanVersion,
+		'D=s'				=> \$lanVersion,
 		's=s'				=>\$simulate,
 		'h|help'			=>
 			sub{print STDOUT get_version();
@@ -380,12 +380,12 @@ MAIN: {
 				print STDOUT get_help();
 				exit(0)
 			},
-		'V|version'	    	=>
+		'V|version'			=>
 			sub{
 				print STDOUT get_version();
 				exit(0);
 			},
-		'usage|?'					=>
+		'usage|?'			=>
 			sub{print STDOUT get_usage();
 				exit(3);
 			}
