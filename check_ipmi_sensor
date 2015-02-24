@@ -432,14 +432,12 @@ MAIN: {
 		$zenoss = 1;
 	}
 
-	my @basecmd; #variable for command to call ipmi
+	# Define basic ipmi command
+	my @basecmd = $IPMICOMMAND;
 	# If host is omitted localhost is assumed, if not turned off sudo is used
 	if(!(defined $ipmi_host) || ($ipmi_host eq 'localhost')){
 		if(!defined($no_sudo)){
 			@basecmd = ('sudo', $IPMICOMMAND);
-		}
-		else{
-			@basecmd = ($IPMICOMMAND);
 		}
 	}
 	if(defined $ipmi_host){
@@ -488,7 +486,7 @@ MAIN: {
 	}
 	#since version 0.8 it is necessary to add the legacy option
 	if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) && (grep(/legacy\-output/,@freeipmi_options) == 0)){
-			push @getstatus, '--legacy-output';
+		push @getstatus, '--legacy-output';
 	}
 	#if ipmi-sensors is used show the state of sensors and ignore N/A
 	if($ipmi_sensors){
