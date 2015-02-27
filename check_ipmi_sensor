@@ -62,8 +62,9 @@ sub get_help
   [-H <hostname>]
        hostname or IP of the IPMI interface.
        For \"-H localhost\" or if no host is specified (local computer) the
-       Nagios/Icinga user must be allowed to run ipmimonitoring/ipmi-sensors
-       with root privileges or via sudo (ipmimonitoring/ipmi-sensor must be
+       Nagios/Icinga user must be allowed to run
+       ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru] with root privileges
+       or via sudo (ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru] must be
        able to access the IPMI devices via the IPMI system interface).
   [-f <FreeIPMI config file>]
        path to the FreeIPMI configuration file.
