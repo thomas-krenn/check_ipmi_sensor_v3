@@ -453,7 +453,8 @@ MAIN: {
 	# If host is omitted localhost is assumed, if not turned off sudo is used
 	if(!(defined $ipmi_host) || ($ipmi_host eq 'localhost')){
 		if(!defined($no_sudo)){
-			@basecmd = ('sudo', $IPMICOMMAND);
+			# Only add sudo if not already root
+			@basecmd = ($> != 0 ? 'sudo' : (), $IPMICOMMAND);
 		}
 	}
 	# If we are not local, we need authentication credentials
