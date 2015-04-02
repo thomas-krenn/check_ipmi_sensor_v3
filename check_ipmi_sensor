@@ -35,7 +35,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
-our $check_ipmi_sensor_version = "3.7";
+our $check_ipmi_sensor_version = "3.8";
 
 sub get_version
 {
@@ -53,6 +53,7 @@ check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
   [-O <FreeIPMI options>] [-b] [-T <sensor type>] [-x <sensor id>]
   [-i <sensor id>] [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
+  [-fc <num_fans>] [--fru] [--nosel] [--nothresholds] [--nosudo]
   [-v|-vv|-vvv]
 EOT
 }

@@ -2,6 +2,15 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.8 20150402
+  * If ipmi host is ommited, localhost is assumed without a LAN driver
+  * Add a 'nosudo' option to disable sudo
+  * Only add sudo if user is not already root
+  * Fix base command usage on localhost
+  * Only add hostname parameter if not on localhost
+  * Check if freeipmi version supports output-sensor-thresholds
+  * Print sensor thresholds fetched via output-sensor-thresholds
+
 Version 3.7 20150211
   * Add LAN driver LAN_2_0 to ipmi-sel and ipmi-fru
 
