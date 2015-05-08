@@ -133,11 +133,15 @@ sub get_help
        For this purpose the tool 'ipmi-fru' is used. E.g.:
          IPMI Status: OK (9000096781)
   [--nosel]
-       turn off system event log checking via ipmi-sel.
+       turn off system event log checking via ipmi-sel. If there are
+       unintentional entries in SEL, use 'ipmi-sel --clear'.
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
   [--nothresholds]
        turn off performance data thresholds from output-sensor-thresholds.
+  [-s <ipmi-sensor output file>]
+       simulation mode - test the plugin with an ipmi-sensor output redirected
+       to a file.
   [-h]
        show this help
   [-V]
@@ -337,12 +341,12 @@ our %hdrmap = (
 	'Sensor Reading'	=> 'reading',
 	'Reading'		=> 'reading',	# FreeIPMI 0.8.x
 	'Event'			=> 'event',	# FreeIPMI 0.8.x
-	'Lower C'			=> 'lowerC',
-	'Lower NC'			=> 'lowerNC',
-	'Upper C'			=> 'upperC',
-	'Upper NC'			=> 'upperNC',
-	'Lower NR'			=> 'lowerNR',
-	'Upper NR'			=> 'upperNR',
+	'Lower C'		=> 'lowerC',
+	'Lower NC'		=> 'lowerNC',
+	'Upper C'		=> 'upperC',
+	'Upper NC'		=> 'upperNC',
+	'Lower NR'		=> 'lowerNR',
+	'Upper NR'		=> 'upperNR',
 );
 
 our $verbosity = 0;
@@ -385,7 +389,7 @@ MAIN: {
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
 		'D=s'				=> \$lanVersion,
-		's=s'				=>\$simulate,
+		's=s'				=> \$simulate,
 		'h|help'			=>
 			sub{print STDOUT get_version();
 				print STDOUT "\n";
