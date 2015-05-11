@@ -135,6 +135,13 @@ sub get_help
   [--nosel]
        turn off system event log checking via ipmi-sel. If there are
        unintentional entries in SEL, use 'ipmi-sel --clear'.
+  [-sx|--selexclude <sel exclude file>]
+       use a sel exclude file to exclude entries from the system event log.
+       Specify name and type pipe delimitered in this file to exclude an entry,
+       for example: System Chassis Chassis Intru|Physical Security
+       To get valid names and types use the -vvv option and take a look at:
+       debug output for sel (-vvv is set). Don't use name and type from the
+       web interface as sensor descriptions are not complete there.
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
   [--nothresholds]
