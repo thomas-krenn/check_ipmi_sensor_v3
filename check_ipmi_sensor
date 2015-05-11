@@ -310,9 +310,20 @@ sub get_sel{
 sub parse_sel{
 	my $selcmd = shift;
 	my $verbosity = shift;
+	my $sel_xfile = shift;
 	my @seloutput = get_sel($selcmd, $verbosity);
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
+	
+	my @sel_xlist;
+	if($sel_xfile){
+		if(!(open (FH, "< $sel_xfile"))){
+			print "-> Reading sel exclude file $sel_xfile failed with: $!.\n";
+			exit(3);	
+		};
+		@sel_xlist = <FH>;
+	}
+	
 	my @sel_rows;
 	foreach my $row (@seloutput){
 		my %curr_row;
@@ -320,7 +331,17 @@ sub parse_sel{
 			my $key = lc $header->[$i];
 			$curr_row{$key} = $row->[$i];
 		}
-		push @sel_rows, \%curr_row;
+		my $skip = 0;
+		foreach my $exclude (@sel_xlist){
+			my @curr_exclude = map { s/^\s*//; s/\s*$//; $_; } split(/\|/,$exclude);
+			if($curr_exclude[0] eq $curr_row{'name'} && 
+			$curr_exclude[1] eq $curr_row{'type'}){
+				$skip = 1;
+			}
+		}
+		if(!$skip){
+			push @sel_rows, \%curr_row;
+		}
 	}
 	return \@sel_rows;
 }
@@ -365,7 +386,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds);
+	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -385,6 +406,7 @@ MAIN: {
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
 		'x|exclude=s'		=> \@ipmi_xlist,
+		'sx|selexclude=s'	=> \$sel_xfile,
 		'i|include=s'		=> \@ipmi_ilist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
@@ -555,7 +577,7 @@ MAIN: {
 	}
 	my $seloutput;
 	if(!$no_sel){
-		$seloutput = parse_sel(\@selcmd, $verbosity);
+		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile);
 	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
