@@ -143,7 +143,7 @@ sub get_help
        debug output for sel (-vvv is set). Don't use name and type from the
        web interface as sensor descriptions are not complete there.
   [-xx|--sexclude <exclude file>]
-       use anexclude file to exclude sensors.
+       use an exclude file to exclude sensors.
        Specify name and type pipe delimitered in this file to exclude a sensor,
        To get valid names and types use the -vvv option.
   [--nosudo]
