@@ -142,6 +142,10 @@ sub get_help
        To get valid names and types use the -vvv option and take a look at:
        debug output for sel (-vvv is set). Don't use name and type from the
        web interface as sensor descriptions are not complete there.
+  [-xx|--sexclude <exclude file>]
+       use anexclude file to exclude sensors.
+       Specify name and type pipe delimitered in this file to exclude a sensor,
+       To get valid names and types use the -vvv option.
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
   [--nothresholds]
@@ -322,15 +326,6 @@ sub parse_sel{
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
 	
-	my @sel_xlist;
-	if($sel_xfile){
-		if(!(open (FH, "< $sel_xfile"))){
-			print "-> Reading sel exclude file $sel_xfile failed with: $!.\n";
-			exit(3);	
-		};
-		@sel_xlist = <FH>;
-	}
-	
 	my @sel_rows;
 	foreach my $row (@seloutput){
 		my %curr_row;
@@ -338,19 +333,38 @@ sub parse_sel{
 			my $key = lc $header->[$i];
 			$curr_row{$key} = $row->[$i];
 		}
-		my $skip = 0;
-		foreach my $exclude (@sel_xlist){
-			my @curr_exclude = map { s/^\s*//; s/\s*$//; $_; } split(/\|/,$exclude);
-			if($curr_exclude[0] eq $curr_row{'name'} && 
-			$curr_exclude[1] eq $curr_row{'type'}){
-				$skip = 1;
-			}
-		}
-		if(!$skip){
+		if(!(exclude_with_file($sel_xfile, $curr_row{'name'}, $curr_row{'type'}))){
 			push @sel_rows, \%curr_row;
 		}
 	}
 	return \@sel_rows;
+}
+
+# Excludes a name and type pair if it is present in the given file, pipe
+# delimitered.
+# @return 1 if name should be skipped, 0 if not
+sub exclude_with_file{
+	my $file_name = shift;
+	my $name = shift;
+	my $type = shift;
+	my @xlist;
+	my $skip = 0;
+	if($file_name){
+		if(!(open (FH, "< $file_name"))){
+			print "-> Reading exclude file $file_name failed with: $!.\n";
+			exit(3);
+		};
+		@xlist = <FH>;
+	}
+	foreach my $exclude (@xlist){
+		my @curr_exclude = map { s/^\s*//; s/\s*$//; $_; } split(/\|/,$exclude);
+		if($curr_exclude[0] eq $name && 
+		$curr_exclude[1] eq $type){
+			$skip = 1;
+		}
+	}
+	close FH;
+	return $skip;
 }
 
 #define entire hashes
@@ -393,7 +407,7 @@ MAIN: {
 	my $abort_text = '';
 	my $zenoss = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile);
+	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -414,6 +428,7 @@ MAIN: {
 		'vvv'				=> sub{$verbosity=3},
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'sx|selexclude=s'	=> \$sel_xfile,
+		'xx|sexclude=s'		=> \$s_xfile,
 		'i|include=s'		=> \@ipmi_ilist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
@@ -669,7 +684,9 @@ MAIN: {
 			while ( my ($key, $index) = each %header ){
 				$row{$key} = $row->[$index];
 			}
-			push @ipmioutput2, \%row;
+			if(!(exclude_with_file($s_xfile, $row{'name'}, $row{'type'}))){
+				push @ipmioutput2, \%row;
+			}
 		}
 		#create hash with sensor name an 1
 		my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
