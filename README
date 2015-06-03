@@ -32,8 +32,14 @@
  Installation hints:
  -------------------
    On Debian/Ubuntu use 'apt-get install libipc-run-perl' to install IPC::Run.
+   If you are running the plugin locally and not via network, the user 'nagios'
+   needs root privileges for calling:
+    o ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]
+   You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
+    o nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel
+   Please check with '-vvv' which commands are run by the plugin!
 
  Notes on ipmi-sel:
  ------------------
- If you want to clear the ipmi system event log, pleas use:
-  o /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
+   If you want to clear the ipmi system event log, pleas use:
+    o /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
