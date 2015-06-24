@@ -2,6 +2,10 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.9 20150624
+  * Add exclude files for sensors - use name and type in a file to exclude not
+    needed sensors (-xx for normal sensors, -sx for SEL entries).
+
 Version 3.8 20150402
   * If ipmi host is ommited, localhost is assumed without a LAN driver
   * Add a 'nosudo' option to disable sudo
