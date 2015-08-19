@@ -296,7 +296,8 @@ sub get_sel{
 	else{
 		$selcmd[0] = $sel;
 	}
-	push @selcmd, '--output-event-state', '--interpret-oem-data', '--entity-sensor-names';
+	# Currently only memory sensor types in the event log are monitored
+	push @selcmd, '--output-event-state', '--interpret-oem-data', '--entity-sensor-names', '--sensor-types=Memory';
 	my $seloutput;
 	my $returncode;
 	run \@selcmd, '>&', \$seloutput;
