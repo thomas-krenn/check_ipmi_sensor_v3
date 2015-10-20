@@ -42,7 +42,7 @@ sub get_version
 	return <<EOT;
 check_ipmi_sensor version $check_ipmi_sensor_version
 Copyright (C) 2009-2015 Thomas-Krenn.AG
-Current updates at http://git.thomas-krenn.com/check_ipmi_sensor_v3.git
+Current updates at https://github.com/thomas-krenn/check_ipmi_sensor_v3.git
 EOT
 }
 sub get_usage
