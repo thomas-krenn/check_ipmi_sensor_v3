@@ -2,6 +2,11 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Version 3.10 20151020
+  * Only monitor specific sensor types from the system event log (SEL).
+    The check with ipmi-sel is limited to types of Memory and Processor for
+    monitoring.
+
 Version 3.9 20150624
   * Add exclude files for sensors - use name and type in a file to exclude not
     needed sensors (-xx for normal sensors, -sx for SEL entries).
