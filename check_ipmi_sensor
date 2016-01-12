@@ -98,6 +98,10 @@ sub get_help
        '42.2 Sensor Type Codes and Data' of the IPMI 2.0 spec for a full list
        of possible sensor types. The available types depend on your particular
        server and the available sensors there.
+  [-ST <SEL entry type>]
+       limit SEL entries to specific types, run 'ipmi-sel -L' for a list of
+       types. This defaults to Memory and Processor. Use the special keyword
+       'all' to retrieve all entry types.
   [-x <sensor id>]
        exclude sensor matching <sensor id>. Useful for cases when unused
        sensors cannot be deleted from SDR and are reported in a non-OK state.
@@ -282,6 +286,7 @@ sub get_fru{
 sub get_sel{
 	my @selcmd = @{(shift)};
 	my $verbosity = shift;
+	my @sel_sensor_types = @{(shift)};
 	my $sel;
 	if(-e '/usr/sbin/ipmi-sel'){
 		$sel = '/usr/sbin/ipmi-sel';
@@ -296,8 +301,8 @@ sub get_sel{
 	else{
 		$selcmd[0] = $sel;
 	}
-	# Currently only memory sensor types in the event log are monitored
-	push @selcmd, '--output-event-state', '--interpret-oem-data', '--entity-sensor-names', '--sensor-types=Memory,Processor';
+	push @selcmd, '--output-event-state', '--interpret-oem-data', '--entity-sensor-names';
+	push @selcmd, '--sensor-types=' . join(',', @sel_sensor_types);
 	my $seloutput;
 	my $returncode;
 	run \@selcmd, '>&', \$seloutput;
@@ -323,7 +328,8 @@ sub parse_sel{
 	my $selcmd = shift;
 	my $verbosity = shift;
 	my $sel_xfile = shift;
-	my @seloutput = get_sel($selcmd, $verbosity);
+	my $sel_sensor_types = shift;
+	my @seloutput = get_sel($selcmd, $verbosity, $sel_sensor_types);
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
 	
@@ -407,6 +413,7 @@ MAIN: {
 	my $lanVersion;#if desired use a different protocol version
 	my $abort_text = '';
 	my $zenoss = 0;
+	my @sel_sensor_types;
 	my $simulate = '';
 	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile);
 
@@ -420,6 +427,7 @@ MAIN: {
 		'O|options=s'		=> \@freeipmi_options,
 		'b|compat'			=> \$freeipmi_compat,
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
+		'ST|sel-sensor-types=s'	=> \@sel_sensor_types,
 		'fru'				=> \$use_fru,
 		'nosel'				=> \$no_sel,
 		'nosudo'			=> \$no_sudo,
@@ -491,12 +499,18 @@ MAIN: {
 	#also cf. http://perldoc.perl.org/Getopt/Long.html#Options-with-multiple-values
 	@freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
 	@ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
+	@sel_sensor_types = split(/,/, join(',', @sel_sensor_types));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
 	@ipmi_ilist = split(/,/, join(',', @ipmi_ilist));
 
 	#check for zenoss output
 	if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
 		$zenoss = 1;
+	}
+
+	# Currently only memory sensor types in the event log are monitored by default
+	if(!@sel_sensor_types){
+		@sel_sensor_types = ('Memory', 'Processor');
 	}
 
 	# Define basic ipmi command
@@ -600,7 +614,7 @@ MAIN: {
 	}
 	my $seloutput;
 	if(!$no_sel){
-		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile);
+		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile, \@sel_sensor_types);
 	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
