@@ -99,9 +99,9 @@ sub get_help{
        server and the available sensors there.
   [-ST <SEL entry type>]
        limit SEL entries to specific types, run 'ipmi-sel -L' for a list of
-       types. Usually all sensors are populated to the SEL, currently per
-       default it is limited to Memory and Processor sensors. Use the special
-       keyword 'all' to retrieve all entry types.
+       types. All sensors are populated to the SEL and per default all sensor
+       types are monitored. E.g. to limit the sensor SEL types to Memory and
+       Processsor use -ST 'Memory,Processor'.
   [-x <sensor id>]
        exclude sensor matching <sensor id>. Useful for cases when unused
        sensors cannot be deleted from SDR and are reported in a non-OK state.
@@ -511,9 +511,9 @@ MAIN: {
 		$zenoss = 1;
 	}
 
-	# Currently only memory sensor types in the event log are monitored by default
+	# Per default monitor all sensor types, use -ST to specify your sensor types
 	if(!@sel_sensor_types){
-		@sel_sensor_types = ('Memory', 'Processor');
+		@sel_sensor_types = ('all');
 	}
 
 	# Define basic ipmi command
