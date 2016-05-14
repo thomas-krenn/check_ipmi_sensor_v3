@@ -259,7 +259,7 @@ sub get_fru{
 		$frucmd[1] = $fru;
 	}
 	else{
-		$frucmd[0] = $fru;	
+		$frucmd[0] = $fru;
 	}
 	#skip checksum validation
 	push @frucmd,'-s';
@@ -335,7 +335,7 @@ sub parse_sel{
 	my @seloutput = get_sel($selcmd, $verbosity, $sel_sensor_types);
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
-	
+
 	my @sel_rows;
 	foreach my $row (@seloutput){
 		my %curr_row;
@@ -368,7 +368,7 @@ sub exclude_with_file{
 	}
 	foreach my $exclude (@xlist){
 		my @curr_exclude = map { s/^\s*//; s/\s*$//; $_; } split(/\|/,$exclude);
-		if($curr_exclude[0] eq $name && 
+		if($curr_exclude[0] eq $name &&
 		$curr_exclude[1] eq $type){
 			$skip = 1;
 		}
@@ -418,7 +418,7 @@ MAIN: {
 	my $zenoss = 0;
 	my @sel_sensor_types;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile);
+	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $no_entity_absent);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -435,6 +435,7 @@ MAIN: {
 		'nosel'				=> \$no_sel,
 		'nosudo'			=> \$no_sudo,
 		'nothresholds'			=> \$no_thresholds,
+		'noentityabsent'	=> \$no_entity_absent,
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
@@ -670,10 +671,10 @@ MAIN: {
 		}
 		#split at newlines, fetch array with lines of output
 		my @ipmioutput = split('\n', $ipmioutput);
-		
+
 		#remove sudo errors and warnings like they appear on dns resolving issues
 		@ipmioutput = map { /^sudo:/ ? () : $_ } @ipmioutput;
-		
+
 		#remove leading and trailing whitespace characters, split at the pipe delimiter
 		@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
 
@@ -725,8 +726,12 @@ MAIN: {
 			if( $zenoss ){
 				$row->{'name'} =~ s/ /_/g;
 			}
+			my $check_sensor_state = 1;
+			if($no_entity_absent && ($row->{'state'} eq 'Entity Absent')){
+				$check_sensor_state = 0;
+			}
 			#check for warning sensors
-			if ( $row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A' ){
+			if($check_sensor_state && ($row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A')){
 				$exit = 1 if $exit < 1;
 				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
 				#don't insert a , the first time
@@ -741,7 +746,7 @@ MAIN: {
 					}
 				}
 			}
-			if ( $row->{'units'} ne 'N/A' ){
+			if($check_sensor_state && ($row->{'units'} ne 'N/A')){
 				my $val = $row->{'reading'};
 				my $perf_data;
 				my $perf_thresholds;
