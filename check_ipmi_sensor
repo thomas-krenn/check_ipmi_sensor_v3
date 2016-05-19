@@ -154,6 +154,8 @@ sub get_help{
        turn off sudo usage on localhost or if ipmi host is ommited.
   [--nothresholds]
        turn off performance data thresholds from output-sensor-thresholds.
+  [--noentityabsent]
+       skip sensor checks for sensors that have 'noentityabsent' as event state
   [-s <ipmi-sensor output file>]
        simulation mode - test the plugin with an ipmi-sensor output redirected
        to a file.
