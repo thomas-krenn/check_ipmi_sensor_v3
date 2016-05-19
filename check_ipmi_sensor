@@ -727,7 +727,7 @@ MAIN: {
 				$row->{'name'} =~ s/ /_/g;
 			}
 			my $check_sensor_state = 1;
-			if($no_entity_absent && ($row->{'event'} eq 'Entity Absent')){
+			if($no_entity_absent && ($row->{'event'} eq '\'Entity Absent\'')){
 				$check_sensor_state = 0;
 			}
 			#check for warning sensors
