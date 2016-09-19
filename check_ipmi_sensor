@@ -97,6 +97,7 @@ sub get_help{
        '42.2 Sensor Type Codes and Data' of the IPMI 2.0 spec for a full list
        of possible sensor types. The available types depend on your particular
        server and the available sensors there.
+       Multiple sensor types can be specified as a comma-separated list.
   [-ST <SEL entry type>]
        limit SEL entries to specific types, run 'ipmi-sel -L' for a list of
        types. All sensors are populated to the SEL and per default all sensor
@@ -108,6 +109,9 @@ sub get_help{
        Option can be specified multiple times. The <sensor id> is a numeric
        value (sensor names are not used as some servers have multiple sensors
        with the same name). Use -vvv option to query the <sensor ids>.
+  [-xT <sensor type>]
+       exclude sensors based on IPMI sensor type.
+       Multiple sensor types can be specified as a comma-separated list.
   [-i <sensor id>]
        include only sensor matching <sensor id>. Useful for cases when only
        specific sensors should be monitored. Be aware that only for the
@@ -411,7 +415,7 @@ MAIN: {
 	my ($show_help, $show_version);
 	my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
 	my (@freeipmi_options, $freeipmi_compat);
-	my (@ipmi_sensor_types, @ipmi_xlist, @ipmi_ilist);
+	my (@ipmi_sensor_types, @ipmi_exclude_sensor_types, @ipmi_xlist, @ipmi_ilist);
 	my (@ipmi_version);
 	my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
 	my $fan_count;#number of fans that should be installed in unit
@@ -432,6 +436,7 @@ MAIN: {
 		'O|options=s'		=> \@freeipmi_options,
 		'b|compat'			=> \$freeipmi_compat,
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
+		'xT|exclude-sensor-types=s'	=> \@ipmi_exclude_sensor_types,
 		'ST|sel-sensor-types=s'	=> \@sel_sensor_types,
 		'fru'				=> \$use_fru,
 		'nosel'				=> \$no_sel,
@@ -505,6 +510,7 @@ MAIN: {
 	#also cf. http://perldoc.perl.org/Getopt/Long.html#Options-with-multiple-values
 	@freeipmi_options = split(/\s+/, join(' ', @freeipmi_options)); # a bit hack, shell word splitting should be implemented...
 	@ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
+	@ipmi_exclude_sensor_types = split(/,/, join(',', @ipmi_exclude_sensor_types));
 	@sel_sensor_types = split(/,/, join(',', @sel_sensor_types));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
 	@ipmi_ilist = split(/,/, join(',', @ipmi_ilist));
@@ -554,10 +560,19 @@ MAIN: {
 	}
 	my @selcmd = @basecmd;
 
-	# , is the seperator in the new string
 	if(@ipmi_sensor_types){
+		# , is the seperator in the new string
+    	# -g option is older name for ipmi-sensors -t or --sensor-types and
+    	# compatible with both older and newer version of FreeIPMI
 		push @basecmd, '-g', join(',', @ipmi_sensor_types);
 	}
+
+	# add sensor types to exclude
+	if(@ipmi_exclude_sensor_types){
+		push @basecmd, '--exclude-sensor-types', join(',', @ipmi_exclude_sensor_types);
+	}
+
+
 	if(@freeipmi_options){
 		push @basecmd, @freeipmi_options;
 	}
