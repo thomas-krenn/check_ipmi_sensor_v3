@@ -431,6 +431,7 @@ MAIN: {
 	my $zenoss = 0;
 	my @sel_sensor_types;
 	my @exclude_sel_sensor_types;
+	my $sel_issues_present = 0;
 	my $simulate = '';
 	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $no_entity_absent);
 
@@ -752,6 +753,7 @@ MAIN: {
 		#start with main output
 		my $exit = 0;
 		my $w_sensors = '';#sensors with warnings
+		my $sel_w_sensors = '';#verbose output for sel entries with warnings
 		my $perf = '';#performance sensor
 		my $curr_fans = 0;
 		foreach my $row ( @ipmioutput2 ){
@@ -827,15 +829,29 @@ MAIN: {
 				$row->{'name'} =~ s/ /_/g;
 			}
 			if ($row->{'state'} ne 'Nominal'){
+				$sel_issues_present += 1;
 				$exit = 1 if $exit < 1;
 				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
-				$w_sensors .= ", " unless $w_sensors eq '';
-				$w_sensors .= "$row->{'name'} = $row->{'state'}";
 				if( $verbosity ){
-					if(defined($row->{'type'})){
-						$w_sensors .= " ($row->{'type'})" ;
-					}
+					$sel_w_sensors .= ", " unless $sel_w_sensors eq '';
+					$sel_w_sensors .= "($row->{'name'} = $row->{'state'},";
+					$sel_w_sensors .= " $row->{'type'}," ;
+					$sel_w_sensors .= " $row->{'event'})" ;
 				}
+			}
+		}
+		if ( $sel_issues_present ){
+			$w_sensors .= ", " unless $w_sensors eq '';
+			if ( $sel_issues_present == 1 ){
+				$w_sensors .= "1 system event log (SEL) entry present";
+			}else{
+				$w_sensors .= $sel_issues_present." system event log (SEL) entries present";
+			}
+			if( $verbosity ){
+				$w_sensors .= " - details: ";
+				$w_sensors .= $sel_w_sensors;
+				$w_sensors .= " - fix the reported issues and clear your SEL";
+				$w_sensors .= " or exclude specific SEL entries using the -sx or -xST option";
 			}
 		}
 		#now check if num fans equals desired unit fans
