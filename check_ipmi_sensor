@@ -674,7 +674,8 @@ MAIN: {
 			@outputRows = split('\n', $ipmioutput);
 		}
 		if(!defined($ipmioutput) || scalar(@outputRows) == 1){
-			print "-> Execution of FreeIPMI returned an empty output or only 1 header row!\n";
+			print "-> Your server seems to be powered off.";
+			print " (Execution of FreeIPMI returned an empty output or only 1 header row!)\n";
 			print "-> $IPMICOMMAND was executed with the following parameters:\n";
 			print "   ", join(' ', @getstatus), "\n";
 			exit(3);
