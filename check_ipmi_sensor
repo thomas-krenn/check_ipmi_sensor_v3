@@ -96,8 +96,10 @@ sub get_help{
        Examples for IPMI sensor types are 'Fan', 'Temperature', 'Voltage', ...
        See the output of the FreeIPMI command 'ipmi-sensors -L' and chapter
        '42.2 Sensor Type Codes and Data' of the IPMI 2.0 spec for a full list
-       of possible sensor types. The available types depend on your particular
-       server and the available sensors there.
+       of possible sensor types. You can also find the full list of possible
+       sensor types at https://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Types
+       The available types depend on your particular server and the available
+       sensors there.
        Multiple sensor types can be specified as a comma-separated list.
   [-ST <SEL sensor type(s)>]
        limit SEL entries to specific types, run 'ipmi-sel -L' for a list of
