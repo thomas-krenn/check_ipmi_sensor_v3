@@ -22,7 +22,7 @@ If you want to clear the ipmi system event log, pleas use:
 * /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
 
 ## License
-Copyright (C) 2009-2016 Thomas-Krenn.AG,
+Copyright (C) 2009-2017 Thomas-Krenn.AG,
 additional contributors see changelog.txt
 
 This program is free software; you can redistribute it and/or modify it under
