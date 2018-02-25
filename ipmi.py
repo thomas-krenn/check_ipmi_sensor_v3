@@ -17,8 +17,9 @@ from os import path as os_path
 from re import compile
 from subprocess import check_output, CalledProcessError
 
+
 # define entire hashes
-hdrmap = {
+HDRMAP = {
     "Record_ID"	: "id",	# FreeIPMI ...,0.7.x
     "Record ID"	: "id",	# FreeIPMI 0.8.x,... with --legacy-output
     "ID"		: "id",	# FreeIPMI 0.8.x
@@ -40,6 +41,7 @@ hdrmap = {
     "Lower NR"	: "lowerNR",
     "Upper NR"	: "upperNR",
 }
+
 
 VERSION = """
 check_ipmi_sensor version 3.12
@@ -137,6 +139,41 @@ def get_sel(use_sudo=False, verbose_level=1, sel_sensor_types=[], sel_exclude_se
     ]
 
     return Command(params, use_sudo, verbose_level).call().split("\n")
+
+def format_ipmi_sensor_result(doc):
+    """
+    translate the header and extract the doc into dict
+    ordering: reading, lower nc, upper nc, lower c, upper c 
+    """
+    doc_by_row = doc.split("\n")
+    header = doc_by_row[0]
+    body = doc_by_row[1:]
+
+    origin_header_list = map(lambda i: i.strip(), header.split("|"))
+    header_list = [HDRMAP.get(header) for header in origin_header_list]
+
+    result_dict = []
+    for row in body:
+        if not row:
+            continue
+        row_fields = map(lambda i: i.strip(), row.split("|"))
+        row_ret = {
+            header_list[i]: row_fields[i]
+            for i in range(len(header_list))
+        }
+        if row_ret["reading"] != "N/A":
+            result_dict.append(row_ret)
+
+    return " ".join([
+        "'{name}'={reading};{lowerNC}:{upperNC};{lowerNR}:{upperNR}".format(
+            name = row["name"],
+            reading = row["reading"],
+            lowerNC = row["lowerNC"],
+            upperNC = row["upperNC"],
+            lowerNR = row["lowerNR"],
+            upperNR = row["upperNR"],
+        ) for row in result_dict
+    ])
 
 class Command:
     """
@@ -385,6 +422,5 @@ if __name__ == "__main__":
     if use_thresholds and not args.no_thresholds:
         get_status_command.append('--output-sensor-thresholds')
 
-    # print get_status_command
     ret = Command(get_status_command, use_sudo, verbose_level).call()
-    print ret
+    print format_ipmi_sensor_result(ret)
