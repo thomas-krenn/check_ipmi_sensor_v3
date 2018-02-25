@@ -41,11 +41,74 @@ hdrmap = {
     "Upper NR"	: "upperNR",
 }
 
+VERSION = """
+check_ipmi_sensor version 3.12
+Copyright (C) 2009-2016 Thomas-Krenn.AG
+Current updates at https://github.com/thomas-krenn/check_ipmi_sensor_v3.git
+"""
+
+EPILOG = """
+Examples:
+  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user
+    IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
+    'FAN 1'=2775.00 [...]
+  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -x 205
+    IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
+    'FAN 2'=2775.00 [...]
+  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4,71
+    IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
+  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4 --fru
+    IPMI Status: OK (0000012345) | 'System Temp'=30.00
+
+Further information about this plugin can be found at
+http://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin
+
+Use the github repo at https://github.com/thomas-krenn/check_ipmi_sensor_v3.git
+to submit patches, or suggest improvements.
+
+Send email to the IPMI-plugin-user mailing list if you have questions regarding
+use of this software. The mailing list is available at
+http://lists.thomas-krenn.com/
+"""
+HELP = """
+"""
+
+
+def get_ipmimonitoring_path():
+    possible_file_path = [
+        "/usr/sbin/ipmimonitoring",
+        "/usr/bin/ipmimonitoring",
+        "/usr/local/sbin/ipmimonitoring",
+        "/usr/local/bin/ipmimonitoring",
+    ]
+    for file_path in possible_file_path:
+        if os_path.isfile(file_path):
+            return file_path
+    assert False, "ipmimonitoring/ipmi-sensors command not found!\n"
+
+def get_ipmi_version():
+    args = [get_ipmimonitoring_path(), "-V"]
+    ret = check_output(args)
+    regex_compile = compile("(\d+)\.(\d+)\.(\d+)")
+    return regex_compile.findall(ret)[0]
+
+def check_thresholds():
+    """
+    check if output-sensor-thresholds can be used, this is supported
+    since 1.2.1. Version 1.2.0 was not released, so skip the third minor
+    version number
+    """
+    ipmi_version = get_ipmi_version()
+
+    if ipmi_version[0] > 1 or ipmi_version[0] == 1 and ipmi_version[1] >= 2:
+        return True
+
+    return False
+
 def get_fru(use_sudo=False, verbose_level=1):
     default_fre_bin = "/usr/sbin/ipmi-fru"
     if os_path.isfile(default_fre_bin):
         fru_bin = default_fre_bin
-        print "come in"
     else:
         fru_bin = Command(
             ["which", "ipmi-fru"],
@@ -103,129 +166,20 @@ class Command:
             returncode = excute_error.returncode
             self.excute_result = False
         else:
-            self.output = check_output(args)
+            self.output = ret
             self.excute_result = True
 
         self.log()
         if not self.excute_result:
             assert False, returncode
 
-        self.format_output()
+        return self.format_output()
 
     def log(self):
         pass
 
     def format_output(self):
         return self.output
-
-
-VERSION = """
-check_ipmi_sensor version 3.12
-Copyright (C) 2009-2016 Thomas-Krenn.AG
-Current updates at https://github.com/thomas-krenn/check_ipmi_sensor_v3.git
-"""
-
-EPILOG = """
-Examples:
-  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user
-    IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
-    'FAN 1'=2775.00 [...]
-  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -x 205
-    IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
-    'FAN 2'=2775.00 [...]
-  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4,71
-    IPMI Status: OK | 'System Temp'=30.00 'Peripheral Temp'=32.00
-  check_ipmi_sensor -H 192.0.2.1 -U monitor -P monitor -L user -i 4 --fru
-    IPMI Status: OK (0000012345) | 'System Temp'=30.00
-
-Further information about this plugin can be found at
-http://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin
-
-Use the github repo at https://github.com/thomas-krenn/check_ipmi_sensor_v3.git
-to submit patches, or suggest improvements.
-
-Send email to the IPMI-plugin-user mailing list if you have questions regarding
-use of this software. The mailing list is available at
-http://lists.thomas-krenn.com/
-"""
-HELP = """
-  [-H <hostname>]
-  [-f <FreeIPMI config file>]
-  [-U <username> -P <password> -L <privilege level>]
-  [-O <FreeIPMI options>]
-       additional options for FreeIPMI. Useful for RHEL/CentOS 5.* with
-       FreeIPMI 0.5.1 (this elder FreeIPMI version does not support config
-       files).
-  [-i <sensor id>]
-       include only sensor matching <sensor id>. Useful for cases when only
-       specific sensors should be monitored. Be aware that only for the
-       specified sensor errors/warnings are generated. Use -vvv option to query
-       the <sensor ids>.
-  [-v|-vv|-vvv]
-       be verbose
-         (no -v) .. single line output
-         -v   ..... single line output with additional details for warnings
-         -vv  ..... multi line output, also with additional details for warnings
-         -vvv ..... debugging output, followed by normal multi line output
-  [-sx|--selexclude <sel exclude file>]
-       use a sel exclude file to exclude entries from the system event log.
-       Specify name and type pipe delimitered in this file to exclude an entry,
-       for example: System Chassis Chassis Intru|Physical Security
-       To get valid names and types use the -vvv option and take a look at:
-       debug output for sel (-vvv is set). Don't use name and type from the
-       web interface as sensor descriptions are not complete there.
-  [-xx|--sexclude <exclude file>]
-       use an exclude file to exclude sensors.
-       Specify name and type pipe delimitered in this file to exclude a sensor,
-       To get valid names and types use the -vvv option.
-  [--nothresholds]
-       turn off performance data thresholds from output-sensor-thresholds.
-  [--noentityabsent]
-       skip sensor checks for sensors that have 'noentityabsent' as event state
-  [-s <ipmi-sensor output file>]
-       simulation mode - test the plugin with an ipmi-sensor output redirected
-       to a file.
-  [--nosel]
-       turn off system event log checking via ipmi-sel. If there are
-       unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
-       option.
-  [-h]
-       show this help
-  [-V]
-       show version information
-"""
-
-
-def get_ipmimonitoring_path():
-    possible_file_path = [
-        "/usr/sbin/ipmimonitoring",
-        "/usr/bin/ipmimonitoring",
-        "/usr/local/sbin/ipmimonitoring",
-        "/usr/local/bin/ipmimonitoring",
-    ]
-    for file_path in possible_file_path:
-        if os_path.isfile(file_path):
-            return file_path
-    assert False, "ipmimonitoring/ipmi-sensors command not found!\n"
-
-def get_ipmi_version():
-    args = [get_ipmimonitoring_path(), "-V"]
-    ret = check_output(args)
-    regex_compile = compile("(\d+)\.(\d+)\.(\d+)")
-    return regex_compile.findall(ret)[0]
-
-def check_thresholds():
-    """
-    check if output-sensor-thresholds can be used, this is supported
-    since 1.2.1. Version 1.2.0 was not released, so skip the third minor
-    version number
-    """
-    ipmi_version = get_ipmi_version()
-
-    if ipmi_version[0] > 1 or ipmi_version[0] == 1 and ipmi_version[1] >= 2:
-        return True
-
-    return False
 
 
 if __name__ == "__main__":
@@ -258,7 +212,7 @@ if __name__ == "__main__":
     parser.add_argument("-U", "--username", type=str, help="username")
     parser.add_argument("-P", "--password", type=str, help="password")
     parser.add_argument(
-       "-L", "--previlege-level",
+       "-L", "--previlege",
        type=str, default="user",
        help="""
        previlege
@@ -344,7 +298,11 @@ if __name__ == "__main__":
        fans reported by IPMI is smaller than <num fans> then a Warning state
        is returned.
     """)
-    parser.add_argument("-O", "--options", nargs="*", help="free ipmi options")
+    parser.add_argument("-OPT", "--options", nargs="*", help="free ipmi options")
+
+    parser.add_argument(
+        "--no-thresholds", action="store_true",
+        help="turn off performance data thresholds from output-sensor-thresholds.")
 
     parser.add_argument("-v", "--verbose", action="count", help="verbose level")
     parser.add_argument("-V", "--version", action="version", version=VERSION)
@@ -388,7 +346,6 @@ if __name__ == "__main__":
         base_command.append("-l")
         base_command.append(args.previlege)
 
-    print dir(args)
     if args.sensor_types:
         base_command.append("-g")
         base_command.append(",".join(args.sensor_types))
@@ -408,23 +365,26 @@ if __name__ == "__main__":
 	# since version 0.8 it is necessary to add the legacy option
         get_status_command.append("--interpret-oem-data")
 
+    ipmi_sensors = False
     if ipmi_version[0] == 0 and ipmi_version[1] > 7 and "legacy-output" not in args.options:
         get_status_command.append("--legacy-output")
+    if ipmi_version[0] > 0 and (not args.options or "lagacy-output" not in args.options):
+        get_status_command[0] = get_status_command[0].replace("monitoring", "-sensors")
+        ipmi_sensors = True
 
-    if not args
-	#if not stated otherwise we use protocol lan version 2 per default
-	if(!defined($lanVersion)){
-		$lanVersion = 'LAN_2_0';
-	}
-	if($lanVersion ne 'default' && defined $ipmi_host && $ipmi_host ne 'localhost'){
-		push @getstatus, "--driver-type=$lanVersion";
-		if(!$no_sel){
-			push @selcmd, "--driver-type=$lanVersion";
-		}
-		if($use_fru){
-			push @frucmd, "--driver-type=$lanVersion";
-		}
-	}
-	if($use_thresholds && !$no_thresholds){
-		push @getstatus, '--output-sensor-thresholds';
-	}
+    if ipmi_sensors:
+        get_status_command.append("--output-sensor-state")
+        get_status_command.append("--ignore-not-available-sensors")
+
+    lan_version = ""
+    if not args.lan_version:
+        lan_version = "LAN_2_0"
+    if lan_version != "default" and args.hostname != "localhost":
+        get_status_command.append("--driver-type={}".format(lan_version))
+
+    if use_thresholds and not args.no_thresholds:
+        get_status_command.append('--output-sensor-thresholds')
+
+    # print get_status_command
+    ret = Command(get_status_command, use_sudo, verbose_level).call()
+    print ret
