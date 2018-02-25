@@ -167,22 +167,6 @@ HELP = """
          -v   ..... single line output with additional details for warnings
          -vv  ..... multi line output, also with additional details for warnings
          -vvv ..... debugging output, followed by normal multi line output
-  [-D]
-       change the protocol LAN version. Normally LAN_2_0 is used as protocol
-       version if not overwritten with this option. Use 'default' here if you
-       don't want to use LAN_2_0.
-  [-fc <num fans>]
-       number of fans that should be active. If the number of current active
-       fans reported by IPMI is smaller than <num fans> then a Warning state
-       is returned.
-  [--fru]
-       print the product serial number if it is available in the IPMI FRU data.
-       For this purpose the tool 'ipmi-fru' is used. E.g.:
-         IPMI Status: OK (9000096781)
-  [--nosel]
-       turn off system event log checking via ipmi-sel. If there are
-       unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
-       option.
   [-sx|--selexclude <sel exclude file>]
        use a sel exclude file to exclude entries from the system event log.
        Specify name and type pipe delimitered in this file to exclude an entry,
@@ -201,6 +185,10 @@ HELP = """
   [-s <ipmi-sensor output file>]
        simulation mode - test the plugin with an ipmi-sensor output redirected
        to a file.
+  [--nosel]
+       turn off system event log checking via ipmi-sel. If there are
+       unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
+       option.
   [-h]
        show this help
   [-V]
@@ -335,6 +323,27 @@ if __name__ == "__main__":
        value (sensor names are not used as some servers have multiple sensors
        with the same name). Use -vvv option to query the <sensor ids>.
        """)
+    parser.add_argument(
+       "-D", "--lan-version", action="store_true",
+       help="""
+       change the protocol LAN version. Normally LAN_2_0 is used as protocol
+       version if not overwritten with this option. Use 'default' here if you
+       don't want to use LAN_2_0.
+       """,
+    )
+    parser.add_argument(
+       "--fru", action="store_true",
+       help="""
+       print the product serial number if it is available in the IPMI FRU data.
+       For this purpose the tool 'ipmi-fru' is used. E.g.:
+         IPMI Status: OK (9000096781)
+       """,
+    )
+    parser.add_argument("-fc", "--fan-count", type=int, help="""
+       number of fans that should be active. If the number of current active
+       fans reported by IPMI is smaller than <num fans> then a Warning state
+       is returned.
+    """)
     parser.add_argument("-O", "--options", nargs="*", help="free ipmi options")
 
     parser.add_argument("-v", "--verbose", action="count", help="verbose level")
@@ -399,16 +408,10 @@ if __name__ == "__main__":
 	# since version 0.8 it is necessary to add the legacy option
         get_status_command.append("--interpret-oem-data")
 
-    if ipmi_version[0] == 0 and ipmi_version[1] > 7 and not args.:
+    if ipmi_version[0] == 0 and ipmi_version[1] > 7 and "legacy-output" not in args.options:
+        get_status_command.append("--legacy-output")
 
-	#since version 0.8 it is necessary to add the legacy option
-	if( ($ipmi_version[0] == 0 && $ipmi_version[1] > 7) && (grep(/legacy\-output/,@freeipmi_options) == 0)){
-		push @getstatus, '--legacy-output';
-	}
-	#if ipmi-sensors is used show the state of sensors and ignore N/A
-	if($ipmi_sensors){
-		push @getstatus, '--output-sensor-state', '--ignore-not-available-sensors';
-	}
+    if not args
 	#if not stated otherwise we use protocol lan version 2 per default
 	if(!defined($lanVersion)){
 		$lanVersion = 'LAN_2_0';
