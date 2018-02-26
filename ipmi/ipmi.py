@@ -23,7 +23,7 @@ from utils import get_fru, get_sel_command
 from utils import Command
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="FreeIPMI python wrapper",
         epilog=EPILOG,
@@ -257,3 +257,7 @@ if __name__ == "__main__":
         format_sel_result(sel_ret),
         format_ipmi_sensor_result(ret),
     )
+
+
+if __name__ == "__main__":
+    main()
