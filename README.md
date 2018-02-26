@@ -1,10 +1,7 @@
 # check_ipmi_sensor - Nagios/Icinga plugin to check IPMI sensors
 
 ## Requirements
-* Nagios or Icinga
 * FreeIPMI version 0.5.1 or newer
-* Perl
-* Perl IPC::Run
 
 ## Installation hints
 On Debian/Ubuntu use 'apt-get install libipc-run-perl' to install IPC::Run.
@@ -16,6 +13,9 @@ You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
 * nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel
 
 Please check with '-vvv' which commands are run by the plugin!
+
+* git+https://github.com/zhao-ji/check\_ipmi\_sensor\_v3.git@master
+* ipmi\_tool -H localhost -U username -P password -L user
 
 ## Notes on ipmi-sel
 If you want to clear the ipmi system event log, pleas use:
