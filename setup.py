@@ -7,11 +7,9 @@ setup(
     url="https://github.com/zhao-ji/check_ipmi_sensor_v3",
     keywords='ipmi v3',
     author="Trevor Max",
-    package=['ipmi'],
-    scripts=["bin/ipmi"],
-    # entry_points={
-    #     "console_scripts": [
-    #         "ipmi=ipmi.ipmi:main",
-    #     ],
-    # },
+    entry_points={
+        "console_scripts": [
+            "ipmi=ipmi:main",
+        ],
+    },
 )
