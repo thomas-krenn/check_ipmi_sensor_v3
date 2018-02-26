@@ -14,8 +14,8 @@ You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
 
 Please check with '-vvv' which commands are run by the plugin!
 
-* ```git+https://github.com/zhao-ji/check\_ipmi\_sensor\_v3.git@master```
-* ```ipmi\_tool -H localhost -U username -P password -L user```
+* ```git+https://github.com/zhao-ji/check_ipmi_sensor_v3.git@master```
+* ```ipmi_tool -H localhost -U username -P password -L user```
 
 ## Notes on ipmi-sel
 If you want to clear the ipmi system event log, pleas use:
