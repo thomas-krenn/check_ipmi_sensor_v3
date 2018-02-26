@@ -654,6 +654,7 @@ MAIN: {
 	my $seloutput;
 	if(!$no_sel){
 		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile, \@sel_sensor_types, \@exclude_sel_sensor_types);
+        print $seloutput;
 	}
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
