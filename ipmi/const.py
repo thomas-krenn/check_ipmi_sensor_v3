@@ -52,6 +52,3 @@ Send email to the IPMI-plugin-user mailing list if you have questions regarding
 use of this software. The mailing list is available at
 http://lists.thomas-krenn.com/
 """
-
-HELP = """
-"""

@@ -17,9 +17,9 @@ from os import path as os_path
 from subprocess import check_output, CalledProcessError
 
 from const import VERSION, EPILOG
-from format_func import format_ipmi_sensor_result, format_sel_result
+from format_func import format_ipmi_sensor_result, format_sel_result, format_fru_result
 from utils import get_ipmimonitoring_path, get_ipmi_version, check_thresholds
-from utils import get_fru, get_sel_command
+from utils import get_fru_command, get_sel_command
 from utils import Command
 
 
@@ -253,8 +253,17 @@ def main():
     ).call()
     # print format_sel_result(sel_ret)
 
-    print "{} | {}".format(
+    fru_command_last = get_fru_command(fru_command)
+    fru_ret = Command(
+        fru_command_last,
+        use_sudo,
+        verbose_level,
+    ).call()
+    # print format_fru_result(fru_ret),
+
+    print "{} {} | {}".format(
         format_sel_result(sel_ret),
+        format_fru_result(fru_ret),
         format_ipmi_sensor_result(ret),
     )
 

@@ -70,3 +70,17 @@ def format_ipmi_sensor_result(doc):
             upperNR = row["upperNR"],
         ) for row in result_dict
     ])
+
+
+def format_fru_result(doc):
+    doc_by_row = doc.split("\n")
+    serial_number_line = filter(
+        lambda row: "Product Serial Number" in row,
+        doc_by_row,
+    )
+    if serial_number_line:
+        number = [str(i) for i in range(10)]
+        serial_number = "".join(
+            filter(lambda i: i in number, serial_number_line[0])
+        )
+    return "({})".format(serial_number)

@@ -36,17 +36,11 @@ def check_thresholds():
 
     return False
 
-def get_fru(use_sudo=False, verbose_level=1):
-    default_fre_bin = "/usr/sbin/ipmi-fru"
-    if os_path.isfile(default_fre_bin):
-        fru_bin = default_fre_bin
-    else:
-        fru_bin = Command(
-            ["which", "ipmi-fru"],
-            use_sudo, verbose_level
-        ).call()
+def get_fru_command(base_command):
+    base_command[0] = base_command[0].replace("monitoring", "-fru")
+    base_command.append("-s")
 
-    return Command([fru_bin, "-s"], use_sudo).call().split("\n")
+    return base_command
 
 def get_sel_command(base_command, sel_sensor_types=[], sel_exclude_sensor_types=[]):
     base_command[0] = base_command[0].replace("monitoring", "-sel")
