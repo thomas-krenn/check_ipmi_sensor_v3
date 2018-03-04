@@ -4,22 +4,36 @@
 * FreeIPMI version 0.5.1 or newer
 
 ## Installation hints
-On Debian/Ubuntu use 'apt-get install libipc-run-perl' to install IPC::Run.
-If you are running the plugin locally and not via network, the user 'nagios'
-needs root privileges for calling:
-* ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]
-
-You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
-* nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel
-
-Please check with '-vvv' which commands are run by the plugin!
-
-* ```git+https://github.com/zhao-ji/check_ipmi_sensor_v3.git@master```
+* ```apt-get install freeipmi```
+* ```pip install git+https://github.com/zhao-ji/check_ipmi_sensor_v3.git@master```
 * ```ipmi_tool -H localhost -U username -P password -L user```
 
 ## Notes on ipmi-sel
 If you want to clear the ipmi system event log, pleas use:
 * /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
+
+## Get same results with NetXMS
+- show all sensors and show thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user```
+- show all sensors and hide thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user --no-thresholds```
+- show temperature sensors and show thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user -T TEMPERATURE```
+- show temperature sensors and hide thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user --no-thresholds -T TEMPERATURE```
+- show voltage sensors and show thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user -T VOLTAGE```
+- show voltage sensors and hide thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user --no-thresholds -T VOLTAGE```
+- show fan sensors and show thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user -T FAN```
+- show fan sensors and hide thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user --no-thresholds -T FAN```
+- show power supply and show thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user -T POWER_SUPPLY```
+- show power sensors and hide thresholds
+    ```ipmi_tool -H hostname -U username -P password -L user --no-thresholds -T POWER_SUPPLY```
+
 
 ## License
 Copyright (C) 2009-2016 Thomas-Krenn.AG,

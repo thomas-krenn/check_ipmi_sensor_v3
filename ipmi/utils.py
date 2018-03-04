@@ -74,6 +74,7 @@ class Command:
             self.command.extend(self.params)
         else:
             self.command = self.params
+        # print " ".join(self.command)
 
     def call(self):
         try:

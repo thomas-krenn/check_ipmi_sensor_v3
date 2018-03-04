@@ -84,3 +84,53 @@ def format_fru_result(doc):
             filter(lambda i: i in number, serial_number_line[0])
         )
     return "({})".format(serial_number)
+
+
+def ipmi_sensor_netxms_format(doc, filter_thresholds=False):
+    """
+    translate the header and extract the doc into dict
+    ordering: reading, lower nc, upper nc, lower c, upper c 
+    """
+    doc_by_row = doc.split("\n")
+    header = doc_by_row[0]
+    body = doc_by_row[1:]
+
+    origin_header_list = map(lambda i: i.strip(), header.split("|"))
+    header_list = [HDRMAP.get(header) for header in origin_header_list]
+
+    result_dict = []
+    for row in body:
+        if not row:
+            continue
+
+        row_fields = map(lambda i: i.strip(), row.split("|"))
+        row_ret = {
+            header_list[i]: row_fields[i]
+            for i in range(len(header_list))
+        }
+        # if row_ret["reading"] != "N/A":
+        result_dict.append(row_ret)
+
+    header = "Name|Status|Reading|Low NR|LowCT|Low NC|High NC|High CT|High NR"
+    if filter_thresholds:
+        header = "Name|Status|Reading"
+
+    body = []
+    for row in result_dict:
+        if filter_thresholds:
+            body_line = "|".join([
+                row["name"], row["state"],
+                "{} {}".format(row["reading"], row["units"]),
+            ])
+        else:
+            body_line = "|".join([
+                row["name"], row["state"],
+                "{} {}".format(row["reading"], row["units"]),
+                row["lowerNR"], row["lowerC"],
+                row["lowerNC"], row["upperNC"],
+                row["upperC"], row["upperNR"],
+            ])
+        body.append(body_line)
+
+    body.insert(0, header)
+    return "\n".join(body)
