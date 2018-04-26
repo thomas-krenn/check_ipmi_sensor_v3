@@ -112,7 +112,7 @@ def ipmi_sensor_netxms_format(doc, filter_thresholds=False):
         # if row_ret["reading"] != "N/A":
         result_dict.append(row_ret)
 
-    header = "ID|Name|Type|Status|Reading|Unit|Low NR|LowCT|Low NC|High NC|High CT|High NR"
+    header = "ID|Name|Type|Status|Reading|Unit|LowCT|Low NC|High NC|High CT"
     if filter_thresholds:
         header = "ID|Name|Type|Status|Reading|Unit"
 
