@@ -158,6 +158,10 @@ def main():
         "-r", "--record-ids", type=str,
         help="Show specific sensors by record id. Accepts comma separated lists ")
 
+    parser.add_argument(
+        "--sensor-name", type=str,
+        help="Show specific sensors by record name.")
+
 
     parser.add_argument("-v", "--verbose", action="count", help="verbose level")
     parser.add_argument("-V", "--version", action="version", version=VERSION)
@@ -251,7 +255,10 @@ def main():
         monitor_status_command.append('--record-ids={}'.format(args.record_ids))
 
     ret = Command(monitor_status_command, use_sudo, verbose_level).call()
-    print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds)
+    if args.sensor_name:
+        print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds, sensor_name=args.sensor_name)
+    else:
+        print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds)
 
     # print format_ipmi_sensor_result(ret)
     # sel_command_last = get_sel_command(

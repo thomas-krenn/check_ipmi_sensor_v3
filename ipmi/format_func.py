@@ -87,7 +87,7 @@ def format_fru_result(doc):
     return "({})".format(serial_number)
 
 
-def ipmi_sensor_netxms_format(doc, filter_thresholds=False):
+def ipmi_sensor_netxms_format(doc, filter_thresholds=False, sensor_name=None):
     """
     translate the header and extract the doc into dict
     ordering: reading, lower nc, upper nc, lower c, upper c
@@ -118,6 +118,9 @@ def ipmi_sensor_netxms_format(doc, filter_thresholds=False):
 
     body = []
     for row in result_dict:
+        if sensor_name:
+            if sensor_name != row["name"]:
+                continue
         if filter_thresholds:
             body_line = "|".join([
                 row["id"], row["name"], row["type"], row["state"],
