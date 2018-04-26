@@ -154,6 +154,11 @@ def main():
         "--no-thresholds", action="store_true",
         help="turn off performance data thresholds from output-sensor-thresholds.")
 
+    parser.add_argument(
+        "-r", "--record-ids", type=str,
+        help="Show specific sensors by record id. Accepts comma separated lists ")
+
+
     parser.add_argument("-v", "--verbose", action="count", help="verbose level")
     parser.add_argument("-V", "--version", action="version", version=VERSION)
 
@@ -241,6 +246,9 @@ def main():
     if args.no_thresholds:
         # remove all the thresholds
         filter_thresholds = True
+
+    if args.record_ids:
+        monitor_status_command.append('--record-ids={}'.format(args.record_ids))
 
     ret = Command(monitor_status_command, use_sudo, verbose_level).call()
     print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds)

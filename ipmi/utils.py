@@ -5,6 +5,7 @@ from os import path as os_path
 from re import compile
 from subprocess import check_output, CalledProcessError
 
+
 def get_ipmimonitoring_path():
     possible_file_path = [
         "/usr/sbin/ipmimonitoring",
@@ -17,11 +18,13 @@ def get_ipmimonitoring_path():
             return file_path
     assert False, "ipmimonitoring/ipmi-sensors command not found!\n"
 
+
 def get_ipmi_version():
     args = [get_ipmimonitoring_path(), "-V"]
     ret = check_output(args)
-    regex_compile = compile("(\d+)\.(\d+)\.(\d+)")
+    regex_compile = compile(r"(\d+)\.(\d+)\.(\d+)")
     return regex_compile.findall(ret)[0]
+
 
 def check_thresholds():
     """
@@ -36,13 +39,16 @@ def check_thresholds():
 
     return False
 
+
 def get_fru_command(base_command):
     base_command[0] = base_command[0].replace("monitoring", "-fru")
     base_command.append("-s")
 
     return base_command
 
-def get_sel_command(base_command, sel_sensor_types=[], sel_exclude_sensor_types=[]):
+
+def get_sel_command(
+        base_command, sel_sensor_types=[], sel_exclude_sensor_types=[]):
     base_command[0] = base_command[0].replace("monitoring", "-sel")
 
     base_command.extend([
@@ -54,6 +60,7 @@ def get_sel_command(base_command, sel_sensor_types=[], sel_exclude_sensor_types=
     ])
 
     return base_command
+
 
 class Command:
     """
