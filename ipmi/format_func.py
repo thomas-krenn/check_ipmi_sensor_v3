@@ -134,5 +134,5 @@ def ipmi_sensor_netxms_format(doc, filter_thresholds=False, sensor_name=None):
             ])
         body.append(body_line)
 
-    body.insert(0, header)
-    return "\n".join(body)
+    # body.insert(0, header)
+    return ";".join(body)
