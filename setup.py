@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="ipmi",
-    version="0.5",
+    version="0.6",
     description="a ipmi python client migrate from perl",
     url="https://github.com/zhao-ji/check_ipmi_sensor_v3",
     keywords='ipmi v3',
