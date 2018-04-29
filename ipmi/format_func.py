@@ -112,22 +112,18 @@ def ipmi_sensor_netxms_format(doc, filter_thresholds=False, sensor_name=None):
         # if row_ret["reading"] != "N/A":
         result_dict.append(row_ret)
 
-    header = "ID|Name|Type|Status|Reading|Unit|LowCT|Low NC|High NC|High CT"
-    if filter_thresholds:
-        header = "ID|Name|Type|Status|Reading|Unit"
-
     body = []
     for row in result_dict:
         if sensor_name:
             if sensor_name != row["name"]:
                 continue
         if filter_thresholds:
-            body_line = "|".join([
+            body_line = ";".join([
                 row["id"], row["name"], row["type"], row["state"],
                 row["reading"], row["units"],
             ])
         else:
-            body_line = "|".join([
+            body_line = ";".join([
                 row["id"], row["name"], row["type"], row["state"],
                 row["reading"], row["units"],
                 row["lowerC"], row["lowerNC"], row["upperNC"], row["upperC"],
@@ -135,4 +131,8 @@ def ipmi_sensor_netxms_format(doc, filter_thresholds=False, sensor_name=None):
         body.append(body_line)
 
     # body.insert(0, header)
-    return ";".join(body)
+    # header = "ID|Name|Type|Status|Reading|Unit|LowCT|Low NC|High NC|High CT"
+    # if filter_thresholds:
+    #     header = "ID|Name|Type|Status|Reading|Unit"
+
+    return "|".join(body)
