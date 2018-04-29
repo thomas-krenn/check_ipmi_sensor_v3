@@ -162,6 +162,8 @@ def main():
         "--sensor-name", type=str,
         help="Show specific sensors by record name.")
 
+    parser.add_argument(
+        "--list-sensor-types", action="store_true", help="List sensor types.")
 
     parser.add_argument("-v", "--verbose", action="count", help="verbose level")
     parser.add_argument("-V", "--version", action="version", version=VERSION)
@@ -257,6 +259,8 @@ def main():
     ret = Command(monitor_status_command, use_sudo, verbose_level).call()
     if args.sensor_name:
         print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds, sensor_name=args.sensor_name)
+    elif args.list_sensor_types:
+        print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds, list_sensor_types=True)
     else:
         print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds)
 
