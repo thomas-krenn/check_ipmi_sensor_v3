@@ -12,26 +12,22 @@ migrate from check_ipmi_sensor
 """
 
 import argparse
-from copy import deepcopy
 from os import path as os_path
-from subprocess import check_output, CalledProcessError
 
 from const import VERSION, EPILOG
-from format_func import format_ipmi_sensor_result, ipmi_sensor_netxms_format
-from format_func import format_sel_result, format_fru_result
+from format_func import ipmi_sensor_netxms_format
 from utils import get_ipmimonitoring_path, get_ipmi_version, check_thresholds
-from utils import get_fru_command, get_sel_command
 from utils import Command
 
 
-def main():
+def parse_args():
     parser = argparse.ArgumentParser(
         description="FreeIPMI python wrapper",
         epilog=EPILOG,
     )
     parser.add_argument(
         "-H", "--hostname",
-        type=str, default="localhost",  # required=True,
+        type=str, default="localhost",
         metavar="HOSTNAME",
         help="""
         hostname or IP of the IPMI interface.
@@ -65,14 +61,6 @@ def main():
        Warning: with this method the password is visible in the process list.
                 So whenever possible use a FreeIPMI confiugration file instead.
        """,
-    )
-    parser.add_argument(
-       "--nosel", action="store_true",
-       help="""
-       turn off system event log checking via ipmi-sel. If there are
-       unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
-       option.
-       """
     )
     parser.add_argument(
        "--nosudo", action="store_true",
@@ -135,14 +123,6 @@ def main():
        don't want to use LAN_2_0.
        """,
     )
-    parser.add_argument(
-       "--fru", action="store_true",
-       help="""
-       print the product serial number if it is available in the IPMI FRU data.
-       For this purpose the tool 'ipmi-fru' is used. E.g.:
-         IPMI Status: OK (9000096781)
-       """,
-    )
     parser.add_argument("-fc", "--fan-count", type=int, help="""
        number of fans that should be active. If the number of current active
        fans reported by IPMI is smaller than <num fans> then a Warning state
@@ -162,16 +142,20 @@ def main():
         "--sensor-name", type=str,
         help="Show specific sensors by record name.")
 
-    parser.add_argument(
-        "--list-sensor-types", action="store_true", help="List sensor types.")
+    parser.add_argument("--list-sensor-types", action="store_true", help="List sensor types.")
+
+    parser.add_argument("--record-delimiter", type=str, default="\n", help="Delimiter of records")
 
     parser.add_argument("-v", "--verbose", action="count", help="verbose level")
     parser.add_argument("-V", "--version", action="version", version=VERSION)
 
     args = parser.parse_args()
+    return args
 
-    username, password, previlege = None, None, None
-    hostname = None
+
+def main():
+    args = parse_args()
+
     use_sudo = None
     verbose_level = 1
 
@@ -182,13 +166,13 @@ def main():
         verbose_level = args.verbose
 
     base_command = [get_ipmimonitoring_path()]
-    if hostname == "localhost":
-	# If host is omitted localhost is assumed, if not turned off sudo is used
-        if use_sudo is None:
-            base_command.insert(0, "sudo")
-    else:
-        base_command.append("-h")
-        base_command.append(args.hostname)
+
+    # If host is omitted localhost is assumed, if not turned off sudo is used
+    if args.hostname == "localhost" and use_sudo is None:
+        base_command.insert(0, "sudo")
+
+    base_command.append("-h")
+    base_command.append(args.hostname)
 
     if args.credential_file:
         if not os_path.isfile(args.credential_file):
@@ -211,85 +195,55 @@ def main():
         base_command.append("--exclude-sensor-types")
         base_command.append(",".join(args.exclude_sensor_types))
 
-    monitor_status_command = deepcopy(base_command)
-    sel_command = deepcopy(base_command)
-    fru_command = deepcopy(base_command)
-
     if not args.compat:
-        monitor_status_command.append("--quiet-cache")
-        monitor_status_command.append("--sdr-cache-recreate")
+        base_command.append("--quiet-cache")
+        base_command.append("--sdr-cache-recreate")
 
     ipmi_version = get_ipmi_version()
+    # since version 0.8 it is necessary to add the legacy option
     if ipmi_version[0] > 0 or ipmi_version[0] == 0 and ipmi_version[1] > 7:
-	# since version 0.8 it is necessary to add the legacy option
-        monitor_status_command.append("--interpret-oem-data")
+        base_command.append("--interpret-oem-data")
 
     ipmi_sensors = False
     if ipmi_version[0] == 0 and ipmi_version[1] > 7 and "legacy-output" not in args.options:
-        monitor_status_command.append("--legacy-output")
+        base_command.append("--legacy-output")
     if ipmi_version[0] > 0 and (not args.options or "lagacy-output" not in args.options):
-        monitor_status_command[0] = monitor_status_command[0].replace("monitoring", "-sensors")
+        base_command[0] = base_command[0].replace("monitoring", "-sensors")
         ipmi_sensors = True
 
     if ipmi_sensors:
-        monitor_status_command.append("--output-sensor-state")
-        monitor_status_command.append("--ignore-not-available-sensors")
+        base_command.append("--output-sensor-state")
+        base_command.append("--ignore-not-available-sensors")
 
     lan_version = ""
     if not args.lan_version:
         lan_version = "LAN_2_0"
     if lan_version != "default" and args.hostname != "localhost":
-        monitor_status_command.append("--driver-type={}".format(lan_version))
-        if not args.nosel:
-            sel_command.append("--driver-type={}".format(lan_version))
-        if not args.fru:
-            fru_command.append("--driver-type={}".format(lan_version))
+        base_command.append("--driver-type={}".format(lan_version))
 
     use_thresholds = check_thresholds()
     filter_thresholds = False
     if use_thresholds:
-        monitor_status_command.append('--output-sensor-thresholds')
+        base_command.append('--output-sensor-thresholds')
     if args.no_thresholds:
         # remove all the thresholds
         filter_thresholds = True
 
     if args.record_ids:
-        monitor_status_command.append('--record-ids={}'.format(args.record_ids))
+        base_command.append('--record-ids={}'.format(args.record_ids))
 
-    ret = Command(monitor_status_command, use_sudo, verbose_level).call()
+    ret = Command(base_command, use_sudo, verbose_level).call()
+    format_params = {
+        "doc": ret,
+        "record_delimiter": args.record_delimiter,
+        "filter_thresholds": filter_thresholds,
+    }
     if args.sensor_name:
-        print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds, sensor_name=args.sensor_name)
+        format_params["sensor_name"] = args.sensor_name
     elif args.list_sensor_types:
-        print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds, list_sensor_types=True)
-    else:
-        print ipmi_sensor_netxms_format(ret, filter_thresholds=filter_thresholds)
+        format_params["list_sensor_types"] = True
 
-    # print format_ipmi_sensor_result(ret)
-    # sel_command_last = get_sel_command(
-    #     sel_command,
-    #     sel_sensor_types=args.sel_sensor_types,
-    #     sel_exclude_sensor_types=args.exclude_sel_sensor_types,
-    # )
-    # sel_ret = Command(
-    #     sel_command_last,
-    #     use_sudo,
-    #     verbose_level,
-    # ).call()
-    # # print format_sel_result(sel_ret)
-
-    # fru_command_last = get_fru_command(fru_command)
-    # fru_ret = Command(
-    #     fru_command_last,
-    #     use_sudo,
-    #     verbose_level,
-    # ).call()
-    # # print format_fru_result(fru_ret),
-
-    # print "{} {} | {}".format(
-    #     format_sel_result(sel_ret),
-    #     format_fru_result(fru_ret),
-    #     format_ipmi_sensor_result(ret),
-    # )
+    print ipmi_sensor_netxms_format(**format_params)
 
 
 if __name__ == "__main__":

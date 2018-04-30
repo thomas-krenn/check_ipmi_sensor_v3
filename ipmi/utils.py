@@ -40,28 +40,6 @@ def check_thresholds():
     return False
 
 
-def get_fru_command(base_command):
-    base_command[0] = base_command[0].replace("monitoring", "-fru")
-    base_command.append("-s")
-
-    return base_command
-
-
-def get_sel_command(
-        base_command, sel_sensor_types=[], sel_exclude_sensor_types=[]):
-    base_command[0] = base_command[0].replace("monitoring", "-sel")
-
-    base_command.extend([
-        '--output-event-state',
-        '--interpret-oem-data',
-        '--entity-sensor-names',
-        '--sensor-types=' + ",".join(sel_sensor_types),
-        '--exclude-sensor-types=' + ",".join(sel_exclude_sensor_types),
-    ])
-
-    return base_command
-
-
 class Command:
     """
     call the shell command in a safe way
