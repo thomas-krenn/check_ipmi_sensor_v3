@@ -366,6 +366,60 @@ sub parse_sel{
 	return \@sel_rows;
 }
 
+sub get_dcmi{
+	my @dcmicmd = @{(shift)};
+	my $verbosity = shift;
+	my $dcmi;
+	if(-e '/usr/sbin/ipmi-dcmi'){
+		$dcmi = '/usr/sbin/ipmi-dcmi';
+	}
+	else{
+		chomp($dcmi = `which ipmi-dcmi`);
+	}
+	#if sudo is used the command is the second element
+	if($dcmicmd[0] eq 'sudo'){
+		$dcmicmd[1] = $dcmi;
+	}
+	else{
+		$dcmicmd[0] = $dcmi;
+	}
+	push @dcmicmd, '--get-system-power-statistics';
+
+	my $dcmioutput;
+	my $returncode;
+	run \@dcmicmd, '>&', \$dcmioutput;
+	$returncode = $? >> 8;
+	if ( $returncode == 0 ){
+		return split('\n', $dcmioutput);
+	}
+}
+
+sub parse_dcmi{
+	my $dcmicmd = shift;
+	my $verbosity = shift;
+	my @dcmioutput = get_dcmi($dcmicmd, $verbosity);
+	if(@dcmioutput){
+		@dcmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\:/, $_) ] } @dcmioutput;
+		my %current_power;
+		my $power_available = 0;
+		foreach my $power (@dcmioutput){
+			if($power->[0] eq 'Current Power'){
+				$power->[1] =~ m/^(\d+)/;
+				my $watts = $1;
+				$current_power{'Current Power'} = $watts;
+			}
+			if($power->[0] eq 'Power Measurement'){
+				if($power->[1] eq 'Active'){
+					$power_available = 1;
+				}
+			}
+		}
+		if($power_available == 1){
+			return \%current_power;
+		}
+	}
+}
+
 # Excludes a name and type pair if it is present in the given file, pipe
 # delimitered.
 # @return 1 if name should be skipped, 0 if not
@@ -577,6 +631,7 @@ MAIN: {
 		@frucmd = @basecmd
 	}
 	my @selcmd = @basecmd;
+	my @dcmicmd = @basecmd;
 
 	if(@ipmi_sensor_types){
 		# , is the seperator in the new string
@@ -655,6 +710,8 @@ MAIN: {
 	if(!$no_sel){
 		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile, \@sel_sensor_types, \@exclude_sel_sensor_types);
 	}
+	my $dcmioutput;
+	$dcmioutput = parse_dcmi(\@dcmicmd, $verbosity);
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
 	if ( $verbosity == 3 ){
@@ -882,6 +939,16 @@ MAIN: {
 				$server_serial[0] =~ m/(\d+)/;
 				$serial_number = $1;
 			}
+		}
+		if(defined($dcmioutput)){
+			my $power_perf = '';
+			if(exists $dcmioutput->{'Current Power'}){
+				$power_perf = '\'Current Power\'=' . $dcmioutput->{'Current Power'};
+				if( $zenoss ){
+					$power_perf =~ s/Current Power/Current_Power/g;
+				}
+			}
+			$perf = $power_perf . ' ' . $perf;
 		}
 		$perf = substr($perf, 0, -1);#cut off the last chars
 		if ( $exit == 0 ){
