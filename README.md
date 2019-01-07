@@ -7,7 +7,18 @@
 * Perl IPC::Run
 
 ## Installation hints
-On Debian/Ubuntu use 'apt-get install libipc-run-perl' to install IPC::Run.
+
+### Debian/Ubuntu
+Install missing lib.
+
+	apt-get install libipc-run-perl
+
+### CentOS
+Install missing lib.
+
+	yum install perl-IPC-Run freeipmi
+
+### Additional
 If you are running the plugin locally and not via network, the user 'nagios'
 needs root privileges for calling:
 * ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]

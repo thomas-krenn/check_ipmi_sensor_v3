@@ -764,8 +764,13 @@ MAIN: {
 				$row->{'name'} =~ s/ /_/g;
 			}
 			my $check_sensor_state = 1;
-			if($no_entity_absent && ($row->{'event'} eq '\'Entity Absent\'')){
-				$check_sensor_state = 0;
+			if($no_entity_absent){
+				if(exists $row->{'event'} && ($row->{'event'} =~ /\'.*((Device|Entity) (Absent|Removed)).*\'/)){
+					$check_sensor_state = 0;
+				}
+				if(exists $row->{'reading'} && ($row->{'reading'} =~ /\'.*((Device|Entity) (Absent|Removed)).*\'/)){
+					$check_sensor_state = 0;
+				}
 			}
 			#check for warning sensors
 			if($check_sensor_state && ($row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A')){
