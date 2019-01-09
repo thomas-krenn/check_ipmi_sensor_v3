@@ -940,7 +940,7 @@ MAIN: {
 				$serial_number = $1;
 			}
 		}
-		if(defined($dcmioutput)){
+		if(defined($dcmioutput) && $dcmioutput ne ''){
 			my $power_perf = '';
 			if(exists $dcmioutput->{'Current Power'}){
 				$power_perf = '\'Current Power\'=' . $dcmioutput->{'Current Power'};
