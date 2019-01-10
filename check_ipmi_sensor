@@ -139,9 +139,10 @@ sub get_help{
        version if not overwritten with this option. Use 'default' here if you
        don't want to use LAN_2_0.
   [-fc <num fans>]
-       number of fans that should be active. If the number of current active
-       fans reported by IPMI is smaller than <num fans> then a Warning state
-       is returned.
+       number of installed fans. If the number of current installed
+       fans reported by IPMI is not equal than <num fans> then a Warning state
+       is returned. Please use this option carefully as number of fans and
+       number of fan sensors can differ!
   [--fru]
        print the product serial number if it is available in the IPMI FRU data.
        For this purpose the tool 'ipmi-fru' is used. E.g.:
