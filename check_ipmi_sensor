@@ -453,7 +453,7 @@ sub exclude_with_file{
 	}
 	foreach my $exclude (@xlist){
 		my @curr_exclude = map { s/^\s*//; s/\s*$//; $_; } split(/\|/,$exclude);
-		if(@$curr_exclude && $curr_exclude[0] ne '' && $curr_exclude[1] ne ''){
+		if(@curr_exclude && $curr_exclude[0] ne '' && $curr_exclude[1] ne ''){
 			#if the first char of the name in the exclude file is a '~' treat it as regex
 			if(substr($curr_exclude[0], 0, 1 ) eq '~'){
 				my $regex_curr_exclude = substr $curr_exclude[0], 1;
