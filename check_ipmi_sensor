@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # check_ipmi_sensor: Nagios/Icinga plugin to check IPMI sensors
 #
-# Copyright (C) 2009-2017 Thomas-Krenn.AG,
+# Copyright (C) 2009-2019 Thomas-Krenn.AG,
 # additional contributors see changelog.txt
 #
 # This program is free software; you can redistribute it and/or modify it under
@@ -150,6 +150,12 @@ sub get_help{
        turn off system event log checking via ipmi-sel. If there are
        unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
        option.
+  [--selonly]
+       check only system event log checking via ipmi-sel. If there are
+       unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
+       option.
+  [--seltail <count>]
+       limit SEL output to specified count of last messages
   [-sx|--selexclude <sel exclude file>]
        use a sel exclude file to exclude entries from the system event log.
        Specify name and type pipe delimitered in this file to exclude an entry,
@@ -492,7 +498,7 @@ MAIN: {
 	my @exclude_sel_sensor_types;
 	my $sel_issues_present = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $no_entity_absent);
+	my ($use_fru, $no_sel, $sel_only, $sel_tail, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $no_entity_absent);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -509,6 +515,8 @@ MAIN: {
 		'xST|exclude-sel-sensor-types=s'	=> \@exclude_sel_sensor_types,
 		'fru'				=> \$use_fru,
 		'nosel'				=> \$no_sel,
+		'selonly'			=> \$sel_only,
+		'seltail=s'			=> \$sel_tail,
 		'nosudo'			=> \$no_sudo,
 		'nothresholds'			=> \$no_thresholds,
 		'noentityabsent'	=> \$no_entity_absent,
@@ -688,12 +696,18 @@ MAIN: {
 	if($use_thresholds && !$no_thresholds){
 		push @getstatus, '--output-sensor-thresholds';
 	}
+	if(defined($sel_tail)){
+		push @selcmd, "--tail=$sel_tail";
+	}
 
 ################################################################################
 	#execute status command and redirect stdout and stderr to ipmioutput
 	my $ipmioutput;
 	my $returncode;
-	if(!$simulate){
+	if ($sel_only){
+		$returncode = 0;
+	}
+	elsif(!$simulate){
 		run \@getstatus, '>&', \$ipmioutput;
 		#the upper eight bits contain the error condition (exit code)
 		#see http://perldoc.perl.org/perlvar.html#Error-Variables
@@ -716,7 +730,7 @@ MAIN: {
 	$dcmioutput = parse_dcmi(\@dcmicmd, $verbosity);
 ################################################################################
 # print debug output when verbosity is set to 3 (-vvv)
-	if ( $verbosity == 3 ){
+	if ( $verbosity == 3 && !$sel_only ){
 		my $ipmicommandversion;
 		run [$IPMICOMMAND, '-V'], '2>&1', '|', ['head', '-n', 1], '&>', \$ipmicommandversion;
 		#remove trailing newline with chomp
@@ -750,7 +764,7 @@ MAIN: {
 		if(defined($ipmioutput)){
 			@outputRows = split('\n', $ipmioutput);
 		}
-		if(!defined($ipmioutput) || scalar(@outputRows) == 1){
+		if(!$sel_only && (!defined($ipmioutput) || scalar(@outputRows) == 1)){
 			print "-> Your server seems to be powered off.";
 			print " (Execution of FreeIPMI returned an empty output or only 1 header row!)\n";
 			print "-> $IPMICOMMAND was executed with the following parameters:\n";
@@ -761,56 +775,11 @@ MAIN: {
 		if ( @ipmi_sensor_types ){
 			print "Sensor Type(s) ", join(', ', @ipmi_sensor_types), " Status: ";
 		}
+		elsif ($sel_only){
+			print "SEL Status: ";
+		}
 		else{
 			print "IPMI Status: ";
-		}
-		#split at newlines, fetch array with lines of output
-		my @ipmioutput = split('\n', $ipmioutput);
-
-		#remove sudo errors and warnings like they appear on dns resolving issues
-		@ipmioutput = map { /^sudo:/ ? () : $_ } @ipmioutput;
-
-		#remove leading and trailing whitespace characters, split at the pipe delimiter
-		@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
-
-		#shift out the header as it is the first line
-		my $header = shift @ipmioutput;
-		if(!defined($header)){
-			print "$ipmioutput\n";
-			print " FreeIPMI returned an empty header map (first line)";
-			if(@ipmi_sensor_types){
-				print " FreeIPMI could not find any sensors for the given sensor type (option '-T').\n";
-			}
-			exit(3);
-		}
-		my %header;
-		for(my $i = 0; $i < @$header; $i++)
-		{
-			#assigning %header with (key from hdrmap) => $i
-			#checking at which position in the header is which key
-			$header{$hdrmap{$header->[$i]}} = $i;
-		}
-		my @ipmioutput2;
-		foreach my $row ( @ipmioutput ){
-			my %row;
-			#fetch keys from header and assign existent values to row
-			#this maps the values from row(ipmioutput) to the header values
-			while ( my ($key, $index) = each %header ){
-				$row{$key} = $row->[$index];
-			}
-			if(!(exclude_with_file($s_xfile, $row{'name'}, $row{'type'}))){
-				push @ipmioutput2, \%row;
-			}
-		}
-		#create hash with sensor name an 1
-		my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
-		#filter out the desired sensor values
-		@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
-		#check for an include list
-		if(@ipmi_ilist){
-			my %ipmi_ilist = map { ($_, 1) } @ipmi_ilist;
-			#only include sensors from include list
-			@ipmioutput2 = grep(exists $ipmi_ilist{$_->{'id'}}, @ipmioutput2);
 		}
 		#start with main output
 		my $exit = 0;
@@ -818,77 +787,129 @@ MAIN: {
 		my $sel_w_sensors = '';#verbose output for sel entries with warnings
 		my $perf = '';#performance sensor
 		my $curr_fans = 0;
-		foreach my $row ( @ipmioutput2 ){
-			if( $zenoss ){
-				$row->{'name'} =~ s/ /_/g;
-			}
-			my $check_sensor_state = 1;
-			if($no_entity_absent){
-				if(exists $row->{'event'} && ($row->{'event'} =~ /\'.*((Device|Entity) (Absent|Removed)).*\'/)){
-					$check_sensor_state = 0;
+		my @ipmioutput2;#filtered original ipmi output
+
+		#skip ipmi output, if only SEL queried
+		if (!$sel_only){
+			#split at newlines, fetch array with lines of output
+			my @ipmioutput = split('\n', $ipmioutput);
+
+			#remove sudo errors and warnings like they appear on dns resolving issues
+			@ipmioutput = map { /^sudo:/ ? () : $_ } @ipmioutput;
+
+			#remove leading and trailing whitespace characters, split at the pipe delimiter
+			@ipmioutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @ipmioutput;
+
+			#shift out the header as it is the first line
+			my $header = shift @ipmioutput;
+			if(!defined($header)){
+				print "$ipmioutput\n";
+				print " FreeIPMI returned an empty header map (first line)";
+				if(@ipmi_sensor_types){
+					print " FreeIPMI could not find any sensors for the given sensor type (option '-T').\n";
 				}
-				if(exists $row->{'reading'} && ($row->{'reading'} =~ /\'.*((Device|Entity) (Absent|Removed)).*\'/)){
-					$check_sensor_state = 0;
+				exit(3);
+			}
+			my %header;
+			for(my $i = 0; $i < @$header; $i++)
+			{
+				#assigning %header with (key from hdrmap) => $i
+				#checking at which position in the header is which key
+				$header{$hdrmap{$header->[$i]}} = $i;
+			}
+			foreach my $row ( @ipmioutput ){
+				my %row;
+				#fetch keys from header and assign existent values to row
+				#this maps the values from row(ipmioutput) to the header values
+				while ( my ($key, $index) = each %header ){
+					$row{$key} = $row->[$index];
+				}
+				if(!(exclude_with_file($s_xfile, $row{'name'}, $row{'type'}))){
+					push @ipmioutput2, \%row;
 				}
 			}
-			#check for warning sensors
-			if($check_sensor_state && ($row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A')){
-				$exit = 1 if $exit < 1;
-				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
-				#don't insert a , the first time
-				$w_sensors .= ", " unless $w_sensors eq '';
-				$w_sensors .= "$row->{'name'} = $row->{'state'}";
-				if( $verbosity ){
-					if( $row->{'reading'} ne 'N/A'){
-						$w_sensors .= " ($row->{'reading'})" ;
+			#create hash with sensor name an 1
+			my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
+			#filter out the desired sensor values
+			@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
+			#check for an include list
+			if(@ipmi_ilist){
+				my %ipmi_ilist = map { ($_, 1) } @ipmi_ilist;
+				#only include sensors from include list
+				@ipmioutput2 = grep(exists $ipmi_ilist{$_->{'id'}}, @ipmioutput2);
+			}
+			foreach my $row ( @ipmioutput2 ){
+				if( $zenoss ){
+					$row->{'name'} =~ s/ /_/g;
+				}
+				my $check_sensor_state = 1;
+				if($no_entity_absent){
+					if(exists $row->{'event'} && ($row->{'event'} =~ /\'.*((Device|Entity) (Absent|Removed)).*\'/)){
+						$check_sensor_state = 0;
+					}
+					if(exists $row->{'reading'} && ($row->{'reading'} =~ /\'.*((Device|Entity) (Absent|Removed)).*\'/)){
+						$check_sensor_state = 0;
+					}
+				}
+				#check for warning sensors
+				if($check_sensor_state && ($row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A')){
+					$exit = 1 if $exit < 1;
+					$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
+					#don't insert a , the first time
+					$w_sensors .= ", " unless $w_sensors eq '';
+					$w_sensors .= "$row->{'name'} = $row->{'state'}";
+					if( $verbosity ){
+						if( $row->{'reading'} ne 'N/A'){
+							$w_sensors .= " ($row->{'reading'})" ;
+						}
+						else{
+							$w_sensors .= " ($row->{'event'})";
+						}
+					}
+				}
+				if($check_sensor_state && ($row->{'units'} ne 'N/A')){
+					my $val = $row->{'reading'};
+					my $perf_data;
+					my $perf_thresholds;
+					if($zenoss){
+						$perf_data = $row->{'name'}."=".$val;
 					}
 					else{
-						$w_sensors .= " ($row->{'event'})";
+						$perf_data = "'".$row->{'name'}."'=".$val;
 					}
+					if($use_thresholds && !$no_thresholds){
+						if(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} ne 'N/A')){
+							$perf_thresholds = $row->{'lowerNC'}.":".$row->{'upperNC'}.";";
+						}
+						elsif(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} eq 'N/A')){
+							$perf_thresholds = $row->{'lowerNC'}.":;";
+						}
+						elsif(($row->{'lowerNC'} eq 'N/A') && ($row->{'upperNC'} ne 'N/A')){
+							$perf_thresholds = "~:".$row->{'upperNC'}.";";
+						}
+						elsif(($row->{'lowerNC'} eq 'N/A') && ($row->{'upperNC'} eq 'N/A')){
+							$perf_thresholds = ";";
+						}
+						if(($row->{'lowerC'} ne 'N/A') && ($row->{'upperC'} ne 'N/A')){
+							$perf_thresholds .= $row->{'lowerC'}.":".$row->{'upperC'};
+						}
+						elsif(($row->{'lowerC'} ne 'N/A') && ($row->{'upperC'} eq 'N/A')){
+							$perf_thresholds .= $row->{'lowerC'}.":";
+						}
+						elsif(($row->{'lowerC'} eq 'N/A') && ($row->{'upperC'} ne 'N/A')){
+							$perf_thresholds .= "~:".$row->{'upperC'};
+						}
+						# Add thresholds to performance data
+						if(($row->{'lowerNC'} ne 'N/A') || ($row->{'upperNC'} ne 'N/A') ||
+						($row->{'lowerC'} ne 'N/A') || ($row->{'upperC'} ne 'N/A')){
+							$perf_data .= ";".$perf_thresholds;
+						}
+					}
+					$perf .= $perf_data." ";
 				}
-			}
-			if($check_sensor_state && ($row->{'units'} ne 'N/A')){
-				my $val = $row->{'reading'};
-				my $perf_data;
-				my $perf_thresholds;
-				if($zenoss){
-					$perf_data = $row->{'name'}."=".$val;
+				if( $row->{'type'} eq 'Fan' && $row->{'reading'} ne 'N/A' ){
+					$curr_fans++;
 				}
-				else{
-					$perf_data = "'".$row->{'name'}."'=".$val;
-				}
-				if($use_thresholds && !$no_thresholds){
-					if(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} ne 'N/A')){
-						$perf_thresholds = $row->{'lowerNC'}.":".$row->{'upperNC'}.";";
-					}
-					elsif(($row->{'lowerNC'} ne 'N/A') && ($row->{'upperNC'} eq 'N/A')){
-						$perf_thresholds = $row->{'lowerNC'}.":;";
-					}
-					elsif(($row->{'lowerNC'} eq 'N/A') && ($row->{'upperNC'} ne 'N/A')){
-						$perf_thresholds = "~:".$row->{'upperNC'}.";";
-					}
-					elsif(($row->{'lowerNC'} eq 'N/A') && ($row->{'upperNC'} eq 'N/A')){
-						$perf_thresholds = ";";
-					}
-					if(($row->{'lowerC'} ne 'N/A') && ($row->{'upperC'} ne 'N/A')){
-						$perf_thresholds .= $row->{'lowerC'}.":".$row->{'upperC'};
-					}
-					elsif(($row->{'lowerC'} ne 'N/A') && ($row->{'upperC'} eq 'N/A')){
-						$perf_thresholds .= $row->{'lowerC'}.":";
-					}
-					elsif(($row->{'lowerC'} eq 'N/A') && ($row->{'upperC'} ne 'N/A')){
-						$perf_thresholds .= "~:".$row->{'upperC'};
-					}
-					# Add thresholds to performance data
-					if(($row->{'lowerNC'} ne 'N/A') || ($row->{'upperNC'} ne 'N/A') ||
-					($row->{'lowerC'} ne 'N/A') || ($row->{'upperC'} ne 'N/A')){
-						$perf_data .= ";".$perf_thresholds;
-					}
-				}
-				$perf .= $perf_data." ";
-			}
-			if( $row->{'type'} eq 'Fan' && $row->{'reading'} ne 'N/A' ){
-				$curr_fans++;
 			}
 		}
 		foreach my $row (@{$seloutput}){
