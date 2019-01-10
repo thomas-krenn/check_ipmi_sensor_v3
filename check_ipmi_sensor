@@ -403,14 +403,16 @@ sub parse_dcmi{
 		my %current_power;
 		my $power_available = 0;
 		foreach my $power (@dcmioutput){
-			if($power->[0] eq 'Current Power'){
-				$power->[1] =~ m/^(\d+)/;
-				my $watts = $1;
-				$current_power{'Current Power'} = $watts;
-			}
-			if($power->[0] eq 'Power Measurement'){
-				if($power->[1] eq 'Active'){
-					$power_available = 1;
+			if(defined($power)){
+				if($power->[0] eq 'Current Power'){
+					$power->[1] =~ m/^(\d+)/;
+					my $watts = $1;
+					$current_power{'Current Power'} = $watts;
+				}
+				if($power->[0] eq 'Power Measurement'){
+					if($power->[1] eq 'Active'){
+						$power_available = 1;
+					}
 				}
 			}
 		}
