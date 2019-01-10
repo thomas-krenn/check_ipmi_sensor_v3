@@ -163,9 +163,15 @@ sub get_help{
        To get valid names and types use the -vvv option and take a look at:
        debug output for sel (-vvv is set). Don't use name and type from the
        web interface as sensor descriptions are not complete there.
+       As with the '-xx' option if the first character of a line is '~' the
+       name is treated as a regular expression.
   [-xx|--sexclude <exclude file>]
-       use an exclude file to exclude sensors.
+       use an exclude file to exclude sensors, each line specifies an exclude.
        Specify name and type pipe delimitered in this file to exclude a sensor,
+       for example: System Chassis Chassis Intru|Physical Security
+       If the first character of a line is '~' the name is treated as a regular
+       expresstion. E.g. to exclude all sensor names from CPU0 to CPU9:
+       ~CPU[0-9] Temp|Temperature
        To get valid names and types use the -vvv option.
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
@@ -446,9 +452,17 @@ sub exclude_with_file{
 	}
 	foreach my $exclude (@xlist){
 		my @curr_exclude = map { s/^\s*//; s/\s*$//; $_; } split(/\|/,$exclude);
-		if($curr_exclude[0] eq $name &&
-		$curr_exclude[1] eq $type){
-			$skip = 1;
+		if(@$curr_exclude && $curr_exclude[0] ne '' && $curr_exclude[1] ne ''){
+			#if the first char of the name in the exclude file is a '~' treat it as regex
+			if(substr($curr_exclude[0], 0, 1 ) eq '~'){
+				my $regex_curr_exclude = substr $curr_exclude[0], 1;
+				if($name =~ m/$regex_curr_exclude/ && $curr_exclude[1] eq $type){
+					$skip = 1;
+				}
+			}
+			elsif($curr_exclude[0] eq $name && $curr_exclude[1] eq $type){
+				$skip = 1;
+			}
 		}
 	}
 	close FH;
