@@ -174,6 +174,14 @@ sub get_help{
        expresstion. E.g. to exclude all sensor names from CPU0 to CPU9:
        ~CPU[0-9] Temp|Temperature
        To get valid names and types use the -vvv option.
+  [-us|--unify-sensors <unify file>]
+       use an unify file to unify sensor names. This is an easy way to rename
+       sensors with given patterns in the file. Once might us this option
+       to get the same sensor names accross different platforms, e.g. to only
+       have 'intrusion' as sensor name and not 'ChassisIntru', 'Chassis_Intru'
+       or 'Chassis Intru'. Rules in the file follow simple regex patterns e.g.:
+       ^(Chassis Intru|ChassisIntru|Chassis_Intru|Physical_Security)$/Intrusion
+       Temp$/TEMP
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
   [--nothresholds]
@@ -470,6 +478,32 @@ sub exclude_with_file{
 	return $skip;
 }
 
+# Reads regular expressions from a file and applies the rules to sensor names.
+# This unifies sensor names across different platforms.
+# @return The sensor name with specified unify rules applied
+sub unify_with_file{
+	my $file_name = shift;
+	my $name = shift;# given sensor name
+	my @ulist;# list of rules to apply
+	if($file_name){
+		if(!(open (FH, "< $file_name"))){
+			print "-> Reading unify file $file_name failed with: $!.\n";
+			exit(3);
+		};
+		@ulist = <FH>;
+	}
+	foreach my $unify_rule (@ulist){
+		#split at the only / that is not masked with a \,
+		#this is the separator in s/x/y/g to get x and y
+		my @curr_rule = map { s/^\s*//; s/\s*$//; $_; } split(/(?<!\\)\//,$unify_rule);
+		if(@curr_rule && $curr_rule[0] ne '' && $curr_rule[1] ne ''){
+			$name =~ s/$curr_rule[0]/$curr_rule[1]/g;
+		}
+	}
+	close FH;
+	return $name;
+}
+
 #define entire hashes
 our %hdrmap = (
 	'Record_ID'		=> 'id',	# FreeIPMI ...,0.7.x
@@ -513,7 +547,7 @@ MAIN: {
 	my @exclude_sel_sensor_types;
 	my $sel_issues_present = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $sel_only, $sel_tail, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $no_entity_absent);
+	my ($use_fru, $no_sel, $sel_only, $sel_tail, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $s_ufile, $no_entity_absent);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -541,6 +575,7 @@ MAIN: {
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'sx|selexclude=s'	=> \$sel_xfile,
 		'xx|sexclude=s'		=> \$s_xfile,
+		'us|unify-sensors=s'=> \$s_ufile,
 		'i|include=s'		=> \@ipmi_ilist,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
@@ -837,7 +872,13 @@ MAIN: {
 				#fetch keys from header and assign existent values to row
 				#this maps the values from row(ipmioutput) to the header values
 				while ( my ($key, $index) = each %header ){
-					$row{$key} = $row->[$index];
+					#check if the option to unify sensor names is active
+					if($key eq 'name' && $s_ufile && $s_ufile ne ''){
+						$row{$key} = unify_with_file($s_ufile, $row->[$index]);
+					}
+					else{
+						$row{$key} = $row->[$index];
+					}
 				}
 				if(!(exclude_with_file($s_xfile, $row{'name'}, $row{'type'}))){
 					push @ipmioutput2, \%row;
@@ -981,10 +1022,14 @@ MAIN: {
 		if(defined($dcmioutput) && $dcmioutput ne ''){
 			my $power_perf = '';
 			if(exists $dcmioutput->{'Current Power'}){
-				$power_perf = '\'Current Power\'=' . $dcmioutput->{'Current Power'};
-				if( $zenoss ){
-					$power_perf =~ s/Current Power/Current_Power/g;
+				my $power_key = 'Current Power';
+				if($s_ufile && $s_ufile ne ''){
+					$power_key = unify_with_file($s_ufile, $power_key);
 				}
+				if( $zenoss ){
+					$power_key =~ s/ /_/g;
+				}
+				$power_perf = "\'$power_key\'=" . $dcmioutput->{'Current Power'};
 			}
 			$perf = $power_perf . ' ' . $perf;
 		}
