@@ -50,10 +50,13 @@ sub get_usage{
 Usage:
 check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
-  [-O <FreeIPMI options>] [-b] [-T <sensor type(s)>] [-x <sensor id>]
-  [-xT <sensor type(s)>] [-xST <SEL sensor type(s)]
+  [-O <FreeIPMI options>] [-b] [-T <sensor type(s)>] [-ST <SEL sensor type(s)>]
+  [-x <sensor id>] [-xT <sensor type(s)>] [-xST <SEL sensor type(s)]
   [-i <sensor id>] [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
-  [-fc <num_fans>] [--fru] [--nosel] [--nothresholds] [--nosudo]
+  [-fc <num_fans>] [--fru] [--nosel] [--selonly] [--seltail <count>]
+  [-sx|--selexclude <sel exclude file>] [-xx|--sexclude <exclude file>]
+  [-us|--unify-sensors <unify file>] [--nosudo [--nothresholds]
+  [--noentityabsent] [-s <ipmi-sensor output file>] [-h] [-V]
   [-v|-vv|-vvv]
 EOT
 }
@@ -171,16 +174,16 @@ sub get_help{
        Specify name and type pipe delimitered in this file to exclude a sensor,
        for example: System Chassis Chassis Intru|Physical Security
        If the first character of a line is '~' the name is treated as a regular
-       expresstion. E.g. to exclude all sensor names from CPU0 to CPU9:
+       expression. E.g. to exclude all sensor names from CPU0 to CPU9:
        ~CPU[0-9] Temp|Temperature
        To get valid names and types use the -vvv option.
   [-us|--unify-sensors <unify file>]
        use an unify file to unify sensor names. This is an easy way to rename
-       sensors with given patterns in the file. Once might us this option
+       sensors with given patterns in the file. Once might use this option
        to get the same sensor names accross different platforms, e.g. to only
-       have 'intrusion' as sensor name and not 'ChassisIntru', 'Chassis_Intru'
-       or 'Chassis Intru'. Rules in the file follow simple regex patterns e.g.:
-       ^(Chassis Intru|ChassisIntru|Chassis_Intru|Physical_Security)\$/Intrusion
+       have 'Mainboard Temperature' as sensor name and not 'MB1 Temperature' or 'System Temp'.
+       Rules in the file follow simple regex patterns e.g.:
+       ^(MB1 Temperature|System Temp)\$/Mainboard Temperature
        Temp\$/TEMP
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
