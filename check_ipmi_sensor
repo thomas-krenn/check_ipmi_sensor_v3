@@ -180,8 +180,8 @@ sub get_help{
        to get the same sensor names accross different platforms, e.g. to only
        have 'intrusion' as sensor name and not 'ChassisIntru', 'Chassis_Intru'
        or 'Chassis Intru'. Rules in the file follow simple regex patterns e.g.:
-       ^(Chassis Intru|ChassisIntru|Chassis_Intru|Physical_Security)$/Intrusion
-       Temp$/TEMP
+       ^(Chassis Intru|ChassisIntru|Chassis_Intru|Physical_Security)\$/Intrusion
+       Temp\$/TEMP
   [--nosudo]
        turn off sudo usage on localhost or if ipmi host is ommited.
   [--nothresholds]
@@ -212,10 +212,10 @@ Further information about this plugin can be found at
 http://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin
 
 Use the github repo at https://github.com/thomas-krenn/check_ipmi_sensor_v3.git
-to submit patches, or suggest improvements.
+to submit patches, suggest improvements or if you have questions regarding
+use of this plugin.
 
-Send email to the IPMI-plugin-user mailing list if you have questions regarding
-use of this software. The mailing list is available at
+Attention: the mailing list is no longer in use but an archive can be found at
 http://lists.thomas-krenn.com/
 EOT
 }
