@@ -12,7 +12,7 @@ With this plugin the hardware status of a server can be monitored with Nagios, I
 ## Installation hints
 For detailed information, installation instructions and definition examples, please go to:
 
-	https://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin
+* [IPMI Sensor Monitoring Plugin](https://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin)
 
 ### Destination folder
 Copy this plugin to the following folder:
@@ -35,7 +35,8 @@ needs root privileges for calling:
 * ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]/[ipmi-dcmi]
 
 You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
-* nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel, /usr/sbin/ipmi-fru, /usr/sbin/ipmi-dcmi
+
+	nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel, /usr/sbin/ipmi-fru, /usr/sbin/ipmi-dcmi
 
 Please check with '-vvv' which commands are run by the plugin!
 
@@ -43,13 +44,13 @@ Please check with '-vvv' which commands are run by the plugin!
 If you want to clear the ipmi system event log, please use ipmi-sel.
 
 ### Remote machine
-* /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
+	/usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
 
 ### Local machine
-* /usr/sbin/ipmi-sel --clear
+	/usr/sbin/ipmi-sel --clear
 
 ## License
-Copyright (C) 2009-2019 Thomas-Krenn.AG,
+Copyright (C) 2009-2019 [Thomas-Krenn.AG](https://www.thomas-krenn.com/en/index.html),
 additional contributors see changelog.txt
 
 This program is free software; you can redistribute it and/or modify it under
