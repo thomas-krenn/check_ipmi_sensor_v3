@@ -1,20 +1,33 @@
 # check_ipmi_sensor - Nagios/Icinga plugin to check IPMI sensors
 
+![](img/Thomas-Krenn_Logo_RGB.png)
+
+## Description
+With this plugin the hardware status of a server can be monitored with Nagios, Icinga or Icinga 2. Specifically, fan speeds, temperatures, voltages, power consumption, power supply performance, etc. can be monitored.
+
 ## Requirements
-* Nagios or Icinga
+* Nagios, Icinga or Icinga 2
 * FreeIPMI version 0.5.1 or newer
 * Perl
 * Perl IPC::Run
 
 ## Installation hints
+For detailed information, installation instructions and definition examples, please go to:
+
+	https://www.thomas-krenn.com/en/wiki/IPMI_Sensor_Monitoring_Plugin
+
+### Destination folder
+Copy this plugin to the following folder:
+
+	/usr/lib/nagios/plugins/check_ipmi_sensor
 
 ### Debian/Ubuntu
-Install missing lib.
+Install missing lib:
 
 	apt-get install libipc-run-perl
 
 ### CentOS
-Install missing lib.
+Install missing lib:
 
 	yum install perl-IPC-Run freeipmi
 
@@ -29,11 +42,11 @@ You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
 Please check with '-vvv' which commands are run by the plugin!
 
 ## Notes on ipmi-sel
-If you want to clear the ipmi system event log, pleas use:
+If you want to clear the ipmi system event log, please use:
 * /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
 
 ## License
-Copyright (C) 2009-2017 Thomas-Krenn.AG,
+Copyright (C) 2009-2019 Thomas-Krenn.AG,
 additional contributors see changelog.txt
 
 This program is free software; you can redistribute it and/or modify it under
