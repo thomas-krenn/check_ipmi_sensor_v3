@@ -1,7 +1,5 @@
 # check_ipmi_sensor - Nagios/Icinga plugin to check IPMI sensors [![License: GPL v3+](https://img.shields.io/badge/License-GPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-![](img/Thomas-Krenn_Logo_RGB.png)
-
 ## Description
 With this plugin the hardware status of a server can be monitored with Nagios, Icinga or Icinga 2. Specifically, fan speeds, temperatures, voltages, power consumption, power supply performance, etc. can be monitored.
 
@@ -34,16 +32,21 @@ Install missing lib:
 ### Additional
 If you are running the plugin locally and not via network, the user 'nagios'
 needs root privileges for calling:
-* ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]
+* ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]/[ipmi-dcmi]
 
 You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
-* nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel
+* nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel, /usr/sbin/ipmi-fru, /usr/sbin/ipmi-dcmi
 
 Please check with '-vvv' which commands are run by the plugin!
 
 ## Notes on ipmi-sel
-If you want to clear the ipmi system event log, please use:
+If you want to clear the ipmi system event log, please use ipmi-sel.
+
+### Remote machine
 * /usr/sbin/ipmi-sel -h $IP -u ADMIN -p $PW -l ADMIN --clear
+
+### Local machine
+* /usr/sbin/ipmi-sel --clear
 
 ## License
 Copyright (C) 2009-2019 Thomas-Krenn.AG,
