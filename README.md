@@ -1,6 +1,6 @@
 # check_ipmi_sensor - Nagios/Icinga plugin to check IPMI sensors [![License: GPL v3+](https://img.shields.io/badge/License-GPL%20v3%2B-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-![](img/Thomas-Krenn_Logo_RGB.png | width=200)
+![](img/Thomas-Krenn_Logo_RGB.png)
 
 ## Description
 With this plugin the hardware status of a server can be monitored with Nagios, Icinga or Icinga 2. Specifically, fan speeds, temperatures, voltages, power consumption, power supply performance, etc. can be monitored.
