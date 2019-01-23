@@ -35,7 +35,7 @@ use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
 ################################################################################
 # set text variables
-our $check_ipmi_sensor_version = "3.12";
+our $check_ipmi_sensor_version = "3.13";
 
 sub get_version{
 	return <<EOT;

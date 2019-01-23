@@ -2,7 +2,18 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
-Version 3.13 20170703
+Version 3.13 20190123
+  * Option --unify-sensors to unify sensor names across platforms
+    (closes issue #8)
+  * Options --xx and -sx now support regular expressions (closes issue #25)
+  * Added --selonly option to check only System Event Log (closes issue #12)
+  * Added --seltail to limit SEL output to specified count of last messages
+  * Added ipmi-dcmi command to fetch current power (closes issue #26)
+  * Added spec file for creating a rpm file under RHEL (closes issue #24)
+  * Added check sensor event and reading for absent sensors
+  * Added installation hints for CentOS
+  * Bug fixes and minor improvements
+  * Updated help texts and usage information
   * Updated copyright information
 
 Version 3.12 20161005
