@@ -91,6 +91,10 @@ sub get_help{
        additional options for FreeIPMI. Useful for RHEL/CentOS 5.* with
        FreeIPMI 0.5.1 (this elder FreeIPMI version does not support config
        files).
+  [--seloptions <FreeIPMI SEL options>]
+       additional options for FreeIPMI SEL command. Usefule for passing extra
+       options to the ipmi-sel call, e.g. --system-event-records:
+       --seloptions '--system-event-records'
   [-b]
        backward compatibility mode for FreeIPMI 0.5.* (this omits the FreeIPMI
        caching options --quiet-cache and --sdr-cache-recreate)
@@ -328,6 +332,7 @@ sub get_sel{
 	my $verbosity = shift;
 	my @sel_sensor_types = @{(shift)};
 	my @exclude_sel_sensor_types = @{(shift)};
+	my @sel_options = @{(shift)};
 	my $sel;
 	if(-e '/usr/sbin/ipmi-sel'){
 		$sel = '/usr/sbin/ipmi-sel';
@@ -344,7 +349,12 @@ sub get_sel{
 	}
 	push @selcmd, '--output-event-state', '--interpret-oem-data', '--entity-sensor-names';
 	push @selcmd, '--sensor-types=' . join(',', @sel_sensor_types);
-	push @selcmd, '--exclude-sensor-types=' . join(',', @exclude_sel_sensor_types);
+	if(@exclude_sel_sensor_types){
+		push @selcmd, '--exclude-sensor-types=' . join(',', @exclude_sel_sensor_types);
+	}
+	if(@sel_options){
+		push @selcmd, join(' ', @sel_options);
+	}
 	my $seloutput;
 	my $returncode;
 	run \@selcmd, '>&', \$seloutput;
@@ -372,7 +382,8 @@ sub parse_sel{
 	my $sel_xfile = shift;
 	my $sel_sensor_types = shift;
 	my $exclude_sel_sensor_types = shift;
-	my @seloutput = get_sel($selcmd, $verbosity, $sel_sensor_types, $exclude_sel_sensor_types);
+	my $sel_options = shift;
+	my @seloutput = get_sel($selcmd, $verbosity, $sel_sensor_types, $exclude_sel_sensor_types, $sel_options);
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
 
@@ -538,7 +549,7 @@ MAIN: {
 	my @ARGV_SAVE = @ARGV;#keep args for verbose output
 	my ($show_help, $show_version);
 	my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
-	my (@freeipmi_options, $freeipmi_compat);
+	my (@freeipmi_options, $freeipmi_compat, @sel_options);
 	my (@ipmi_sensor_types, @ipmi_exclude_sensor_types, @ipmi_xlist, @ipmi_ilist);
 	my (@ipmi_version);
 	my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
@@ -560,6 +571,7 @@ MAIN: {
 		'P|password=s'  	=> \$ipmi_password,
 		'L|privilege-level=s'	=> \$ipmi_privilege_level,
 		'O|options=s'		=> \@freeipmi_options,
+		'seloptions=s'		=> \@sel_options,
 		'b|compat'			=> \$freeipmi_compat,
 		'T|sensor-types=s'	=> \@ipmi_sensor_types,
 		'xT|exclude-sensor-types=s'	=> \@ipmi_exclude_sensor_types,
@@ -642,6 +654,7 @@ MAIN: {
 	@ipmi_sensor_types = split(/,/, join(',', @ipmi_sensor_types));
 	@ipmi_exclude_sensor_types = split(/,/, join(',', @ipmi_exclude_sensor_types));
 	@sel_sensor_types = split(/,/, join(',', @sel_sensor_types));
+	@sel_options = split(/,/, join(',', @sel_options));
 	@exclude_sel_sensor_types = split(/,/, join(',', @exclude_sel_sensor_types));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
 	@ipmi_ilist = split(/,/, join(',', @ipmi_ilist));
@@ -657,7 +670,10 @@ MAIN: {
 	}
     # If -xST has not been set, set this array to empty.
 	if(!@exclude_sel_sensor_types){
-		@exclude_sel_sensor_types = ('');
+		@exclude_sel_sensor_types = ();
+	}
+	if(!@sel_options){
+		@sel_options = ();
 	}
 
 	# Define basic ipmi command
@@ -777,7 +793,7 @@ MAIN: {
 	}
 	my $seloutput;
 	if(!$no_sel){
-		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile, \@sel_sensor_types, \@exclude_sel_sensor_types);
+		$seloutput = parse_sel(\@selcmd, $verbosity, $sel_xfile, \@sel_sensor_types, \@exclude_sel_sensor_types, \@sel_options);
 	}
 	my $dcmioutput;
 	$dcmioutput = parse_dcmi(\@dcmicmd, $verbosity);
