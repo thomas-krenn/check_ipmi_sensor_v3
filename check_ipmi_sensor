@@ -92,9 +92,9 @@ sub get_help{
        FreeIPMI 0.5.1 (this elder FreeIPMI version does not support config
        files).
   [--seloptions <FreeIPMI SEL options>]
-       additional options for FreeIPMI SEL command. Usefule for passing extra
-       options to the ipmi-sel call, e.g. --system-event-records:
-       --seloptions '--system-event-records'
+       additional options for FreeIPMI SEL command. Useful for passing extra
+       options to the ipmi-sel call, e.g. --assume-system-event-records:
+       --seloptions '--assume-system-event-records'
   [-b]
        backward compatibility mode for FreeIPMI 0.5.* (this omits the FreeIPMI
        caching options --quiet-cache and --sdr-cache-recreate)
