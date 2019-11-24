@@ -28,13 +28,18 @@ Install missing lib:
 Install missing lib:
 
 	yum install perl-IPC-Run freeipmi
+	
+### SUSE Enterprise Linux
+Install missing lib:
+
+	zypper install perl-IPC-Run3 freeipmi
 
 ### Additional
-If you are running the plugin locally and not via network, the user 'nagios'
+If you are running the plugin locally and not via network, the user 'nagios' or 'icinga'
 needs root privileges for calling:
 * ipmimonitoring/ipmi-sensors/ipmi-sel/[ipmi-fru]/[ipmi-dcmi]
 
-You can achieve that by adding a sudoers config (e.g. for ipmi-sensors)
+You can achieve that by adding a sudoers config (e.g. for ipmi-sensors and user 'nagios')
 
 	nagios ALL=(root) NOPASSWD: /usr/sbin/ipmi-sensors, /usr/sbin/ipmi-sel, /usr/sbin/ipmi-fru, /usr/sbin/ipmi-dcmi
 
