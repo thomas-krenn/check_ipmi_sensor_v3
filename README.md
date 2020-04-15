@@ -22,7 +22,7 @@ Copy this plugin to the following folder:
 ### Debian/Ubuntu
 Install missing lib:
 
-	apt-get install libipc-run-perl
+	apt-get install libipc-run-perl freeipmi
 
 ### CentOS
 Install missing lib:
