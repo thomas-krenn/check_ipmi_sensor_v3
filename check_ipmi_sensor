@@ -384,6 +384,8 @@ sub parse_sel{
 	my $exclude_sel_sensor_types = shift;
 	my $sel_options = shift;
 	my @seloutput = get_sel($selcmd, $verbosity, $sel_sensor_types, $exclude_sel_sensor_types, $sel_options);
+	# Remove unknown SEL records as they break output, in verbose mode these unknown records are kept as debug output
+	@seloutput = grep(!/Unknown SEL Record Type:/, @seloutput)
 	@seloutput = map { [ map { s/^\s*//; s/\s*$//; $_; } split(m/\|/, $_) ] } @seloutput;
 	my $header = shift(@seloutput);
 
