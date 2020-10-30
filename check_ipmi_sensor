@@ -53,9 +53,9 @@ check_ipmi_sensor -H <hostname>
   [-O <FreeIPMI options>] [-b] [-T <sensor type(s)>] [-ST <SEL sensor type(s)>]
   [-x <sensor id>] [-xT <sensor type(s)>] [-xST <SEL sensor type(s)]
   [-i <sensor id>] [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
-  [-fc <num_fans>] [--fru] [--nosel] [--selonly] [--seltail <count>]
-  [-sx|--selexclude <sel exclude file>] [-xx|--sexclude <exclude file>]
-  [-us|--unify-sensors <unify file>] [--nosudo [--nothresholds]
+  [-fc <num_fans>] [--fru] [--assettag] [--board] [--nosel] [--selonly] 
+  [--seltail <count>] [-sx|--selexclude <sel exclude file>] 
+  [-xx|--sexclude <exclude file>] [-us|--unify-sensors <unify file>] [--nosudo [--nothresholds]
   [--noentityabsent] [-s <ipmi-sensor output file>] [-h] [-V]
   [-v|-vv|-vvv]
 EOT
@@ -154,6 +154,18 @@ sub get_help{
        print the product serial number if it is available in the IPMI FRU data.
        For this purpose the tool 'ipmi-fru' is used. E.g.:
          IPMI Status: OK (9000096781)
+  [--assettag]
+       --fru is mandatory
+       print the assettag if it is available in the IPMI FRU data.
+         IPMI Status: OK (9000096781)
+         Asset Tag: 20200220
+  [--board]
+       --fru is mandatory
+       print additional motherboard informations if it is available in the IPMI FRU data.
+         IPMI Status: OK (9000096781)
+         Board Manufacturer: Supermicro
+         Board Product Name: X10DRW-iT
+         Board Serial Number: AB123456
   [--nosel]
        turn off system event log checking via ipmi-sel. If there are
        unintentional entries in SEL, use 'ipmi-sel --clear' or the -sx or -xST
@@ -563,7 +575,7 @@ MAIN: {
 	my @exclude_sel_sensor_types;
 	my $sel_issues_present = 0;
 	my $simulate = '';
-	my ($use_fru, $no_sel, $sel_only, $sel_tail, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $s_ufile, $no_entity_absent);
+	my ($use_fru, $use_asset, $use_board, $no_sel, $sel_only, $sel_tail, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $s_ufile, $no_entity_absent);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -580,6 +592,8 @@ MAIN: {
 		'ST|sel-sensor-types=s'	=> \@sel_sensor_types,
 		'xST|exclude-sel-sensor-types=s'	=> \@exclude_sel_sensor_types,
 		'fru'				=> \$use_fru,
+		'assettag'			=> \$use_asset,
+		'board'				=> \$use_board,
 		'nosel'				=> \$no_sel,
 		'selonly'			=> \$sel_only,
 		'seltail=s'			=> \$sel_tail,
@@ -1030,14 +1044,44 @@ MAIN: {
 				}
 			}
 		}
-		#check for the FRU serial number
+		#check for the FRU serial number, asset tag and board information
 		my @server_serial;
 		my $serial_number;
+		my @server_asset;
+		my $asset_tag;
+		my @server_board;
+		my $board_manufacturer;
+		my $board_product;
+		my $board_serial;
 		if( $use_fru ){
 			@server_serial = grep(/Product Serial Number/,@fruoutput);
 			if(@server_serial){
 				$server_serial[0] =~ m/\:\s+(.*)$/;
 				$serial_number = $1;
+			}
+			if ( $use_asset ){
+				@server_asset = grep(/Product Asset Tag/,@fruoutput);
+				if(@server_asset){
+					$server_asset[0] =~ m/\:\s+(.*)$/;
+					$asset_tag = $1;
+				}
+			}
+			if ( $use_board ){
+				@server_board = grep(/Board/,@fruoutput);
+				foreach ( @server_board) {
+					if ( $_ =~ /Board Manufacturer/ ){
+						$_ =~ m/Board Manufacturer\:\s+(.*)/;
+						$board_manufacturer = $1;
+					}
+					if ( $_ =~ /Board Product Name/ ){
+						$_ =~ m/Board Product Name\:\s+(.*)/;
+						$board_product = $1;
+					}
+					if ( $_ =~ /Board Serial Number/ ){
+						$_ =~ m/Board Serial Number\:\s+(.*)/;
+						$board_serial = $1;
+					}
+				}
 			}
 		}
 		if(defined($dcmioutput) && $dcmioutput ne ''){
@@ -1066,6 +1110,20 @@ MAIN: {
 		}
 		if( $use_fru && defined($serial_number)){
 			print " ($serial_number)";
+			if ($use_asset && defined($asset_tag)){
+				print "\nAsset Tag: $asset_tag";
+			}
+			if ( $use_board ){
+				if (defined($board_manufacturer)){
+					print "\nBoard Manufacturer: $board_manufacturer";
+				}
+				if (defined($board_product)){
+					print "\nBoard Product: $board_product";
+				}
+				if (defined($board_serial)){
+					print "\nBoard Serial: $board_serial";
+				}
+			}
 		}
 		print " | ", $perf if $perf ne '';
 		print "\n";
