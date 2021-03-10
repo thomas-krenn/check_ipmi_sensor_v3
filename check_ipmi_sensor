@@ -365,7 +365,7 @@ sub get_sel{
 		push @selcmd, '--exclude-sensor-types=' . join(',', @exclude_sel_sensor_types);
 	}
 	if(@sel_options){
-		push @selcmd, join(' ', @sel_options);
+		push @selcmd, @sel_options;
 	}
 	my $seloutput;
 	my $returncode;
