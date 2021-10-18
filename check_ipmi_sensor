@@ -841,7 +841,9 @@ MAIN: {
 		print "$ipmioutput\n";
 		print "-> Execution of $IPMICOMMAND failed with return code $returncode.\n";
 		print "-> $IPMICOMMAND was executed with the following parameters:\n";
-		print "   ", join(' ', @getstatus), "\n";
+		my $getstatusoutput = join(' ', @getstatus);
+		$getstatusoutput =~ s/$ipmi_password/[HIDDEN]/;
+		print "   ", $getstatusoutput, "\n";
 		exit(3);
 	}
 	else{
@@ -853,7 +855,9 @@ MAIN: {
 			print "-> Your server seems to be powered off.";
 			print " (Execution of FreeIPMI returned an empty output or only 1 header row!)\n";
 			print "-> $IPMICOMMAND was executed with the following parameters:\n";
-			print "   ", join(' ', @getstatus), "\n";
+			my $getstatusoutput = join(' ', @getstatus);
+			$getstatusoutput =~ s/$ipmi_password/[HIDDEN]/;
+			print "   ", $getstatusoutput, "\n";
 			exit(3);
 		}
 		#print desired filter types
