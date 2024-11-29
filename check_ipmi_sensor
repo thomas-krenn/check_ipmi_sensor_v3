@@ -55,7 +55,7 @@ check_ipmi_sensor -H <hostname>
   [-i <sensor id>] [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
   [-fc <num_fans>] [--fru] [--assettag] [--board] [--nosel] [--selonly] 
   [--seltail <count>] [-sx|--selexclude <sel exclude file>] 
-  [-xx|--sexclude <exclude file>] [-us|--unify-sensors <unify file>] [--nosudo [--nothresholds]
+  [-xx|--sexclude <exclude file>] [-us|--unify-sensors <unify file>] [--nosudo] [--nothresholds]
   [--noentityabsent] [-s <ipmi-sensor output file>] [-h] [-V]
   [-v|-vv|-vvv]
 EOT
