@@ -1045,7 +1045,7 @@ MAIN: {
 		}
 		#now check if num fans equals desired unit fans
 		if( $fan_count ){
-			if( $curr_fans < $fan_count ){
+			if( $curr_fans != $fan_count ){
 				$exit = 1 if $exit < 1;
 				$w_sensors .= ", " unless $w_sensors eq '';
 				$w_sensors .= "Fan = Warning";
