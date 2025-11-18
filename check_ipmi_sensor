@@ -52,9 +52,9 @@ check_ipmi_sensor -H <hostname>
   [-f <FreeIPMI config file> | -U <username> -P <password> -L <privilege level>]
   [-O <FreeIPMI options>] [-b] [-T <sensor type(s)>] [-ST <SEL sensor type(s)>]
   [-x <sensor id>] [-xT <sensor type(s)>] [-xST <SEL sensor type(s)]
-  [-i <sensor id>] [-o zenoss] [-D <protocol LAN version>] [-h] [-V]
-  [-fc <num_fans>] [--fru] [--assettag] [--board] [--nosel] [--selonly] 
-  [--seltail <count>] [-sx|--selexclude <sel exclude file>] 
+  [-i <sensor id>] [-iW <sensor id>] [-o zenoss] [-D <protocol LAN version>]
+  [-h] [-V] [-fc <num_fans>] [--fru] [--assettag] [--board] [--nosel]
+  [--selonly] [--seltail <count>] [-sx|--selexclude <sel exclude file>]
   [-xx|--sexclude <exclude file>] [-us|--unify-sensors <unify file>] [--nosudo]
   [--nothresholds] [--nodcmi] [--noentityabsent]
   [-s <ipmi-sensor output file>] [-h] [-V]
@@ -131,6 +131,11 @@ sub get_help{
        specific sensors should be monitored. Be aware that only for the
        specified sensor errors/warnings are generated. Use -vvv option to query
        the <sensor ids>.
+  [-iW <sensor id>]
+       Ignore WARNING state of sensors matching <sensor id> and instead report OK
+       state for these. Option can be specified multiple times. The <sensor id>
+       is a numeric value (sensor names are not used as some servers have multiple
+       sensors with the same name). Use -vvv option to query the <sensor ids>.
   [-v|-vv|-vvv]
        be verbose
          (no -v) .. single line output
@@ -567,7 +572,7 @@ MAIN: {
 	my ($show_help, $show_version);
 	my ($ipmi_host, $ipmi_user, $ipmi_password, $ipmi_privilege_level, $ipmi_config_file, $ipmi_outformat);
 	my (@freeipmi_options, $freeipmi_compat, @sel_options);
-	my (@ipmi_sensor_types, @ipmi_exclude_sensor_types, @ipmi_xlist, @ipmi_ilist);
+	my (@ipmi_sensor_types, @ipmi_exclude_sensor_types, @ipmi_xlist, @ipmi_ilist, @ignore_warnings_list);
 	my (@ipmi_version);
 	my $ipmi_sensors = 0;#states to use ipmi-sensors instead of ipmimonitoring
 	my $fan_count;#number of fans that should be installed in unit
@@ -607,6 +612,7 @@ MAIN: {
 		'v|verbosity'		=> \$verbosity,
 		'vv'				=> sub{$verbosity=2},
 		'vvv'				=> sub{$verbosity=3},
+		'iW|ignore-warning=s'   => \@ignore_warnings_list,
 		'x|exclude=s'		=> \@ipmi_xlist,
 		'sx|selexclude=s'	=> \$sel_xfile,
 		'xx|sexclude=s'		=> \$s_xfile,
@@ -676,6 +682,7 @@ MAIN: {
 	@sel_sensor_types = split(/,/, join(',', @sel_sensor_types));
 	@sel_options = split(/,/, join(',', @sel_options));
 	@exclude_sel_sensor_types = split(/,/, join(',', @exclude_sel_sensor_types));
+	@ignore_warnings_list = split(/,/, join(',', @ignore_warnings_list));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
 	@ipmi_ilist = split(/,/, join(',', @ipmi_ilist));
 
@@ -931,6 +938,8 @@ MAIN: {
 			}
 			#create hash with sensor name an 1
 			my %ipmi_xlist = map { ($_, 1) } @ipmi_xlist;
+			# create hash of sensors where we ignore warnings
+			my %ignore_warnings_list = map { ($_, 1) } @ignore_warnings_list;
 			#filter out the desired sensor values
 			@ipmioutput2 = grep(!exists $ipmi_xlist{$_->{'id'}}, @ipmioutput2);
 			#check for an include list
@@ -954,11 +963,11 @@ MAIN: {
 				}
 				#check for warning sensors
 				if($check_sensor_state && ($row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A')){
-					$exit = 1 if $exit < 1;
+					$exit = 1 if $exit < 1 && !exists $ignore_warnings_list{$row->{'id'}};
 					$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
 					#don't insert a , the first time
 					$w_sensors .= ", " unless $w_sensors eq '';
-					$w_sensors .= "$row->{'name'} = $row->{'state'}";
+					$w_sensors .= "$row->{'name'} = $row->{'state'}" unless exists $ignore_warnings_list{$row->{'id'}};
 					if( $verbosity ){
 						if( $row->{'reading'} ne 'N/A'){
 							$w_sensors .= " ($row->{'reading'})" ;
