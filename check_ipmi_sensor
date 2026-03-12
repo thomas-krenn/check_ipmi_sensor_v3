@@ -322,8 +322,6 @@ sub get_fru{
 	else{
 		$frucmd[0] = $fru;
 	}
-	#skip checksum validation
-	push @frucmd,'-s';
 	my $fruoutput;
 	my $returncode;
 	run \@frucmd, '>&', \$fruoutput;
