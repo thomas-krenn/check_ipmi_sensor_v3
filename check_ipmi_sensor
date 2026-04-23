@@ -902,7 +902,7 @@ MAIN: {
 		#start with main output
 		my $exit = 0;
 		my $w_sensors = '';#sensors with warnings
-		my $sel_w_sensors = '';#verbose output for sel entries with warnings
+		my $sel_long_output = '';#one SEL entry per line, shown as Nagios long output
 		my $perf = '';#performance sensor
 		my $curr_fans = 0;
 		my @ipmioutput2;#filtered original ipmi output
@@ -1047,10 +1047,9 @@ MAIN: {
 				$exit = 1 if $exit < 1;
 				$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
 				if( $verbosity ){
-					$sel_w_sensors .= ", " unless $sel_w_sensors eq '';
-					$sel_w_sensors .= "($row->{'name'} = $row->{'state'},";
-					$sel_w_sensors .= " $row->{'type'}," ;
-					$sel_w_sensors .= " $row->{'event'})" ;
+					$sel_long_output .= "($row->{'name'} = $row->{'state'},";
+					$sel_long_output .= " $row->{'type'},";
+					$sel_long_output .= " $row->{'event'})\n";
 				}
 			}
 		}
@@ -1062,10 +1061,8 @@ MAIN: {
 				$w_sensors .= $sel_issues_present." system event log (SEL) entries present";
 			}
 			if( $verbosity ){
-				$w_sensors .= " - details: ";
-				$w_sensors .= $sel_w_sensors;
-				$w_sensors .= " - fix the reported issues and clear your SEL";
-				$w_sensors .= " or exclude specific SEL entries using the -sx or -xST option";
+				$sel_long_output .= "fix the reported issues and clear your SEL";
+				$sel_long_output .= " or exclude specific SEL entries using the -sx or -xST option\n\n";
 			}
 		}
 		#now check if num fans equals desired unit fans
@@ -1162,6 +1159,9 @@ MAIN: {
 		}
 		print " | ", $perf if $perf ne '';
 		print "\n";
+
+		#multi-line long output for SEL entries (one per line)
+		print $sel_long_output if $sel_long_output ne '';
 
 		if ( $verbosity > 1 ){
 			foreach my $row (@ipmioutput2){
