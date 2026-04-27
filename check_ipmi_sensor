@@ -33,6 +33,7 @@ use strict;
 use warnings;
 use Getopt::Long qw(:config no_ignore_case);
 use IPC::Run qw( run ); #interact with processes
+use POSIX qw(strftime);
 ################################################################################
 # set text variables
 our $check_ipmi_sensor_version = "3.14";
@@ -54,7 +55,7 @@ check_ipmi_sensor -H <hostname>
   [-x <sensor id>] [-xT <sensor type(s)>] [-xST <SEL sensor type(s)]
   [-i <sensor id>] [-iW <sensor id>] [-o zenoss] [-D <protocol LAN version>]
   [-h] [-V] [-fc <num_fans>] [--fru] [--assettag] [--board] [--nosel]
-  [--selonly] [--seltail <count>] [-sx|--selexclude <sel exclude file>]
+  [--selonly] [--seltail <count>] [--seldays <days>] [-sx|--selexclude <sel exclude file>]
   [-xx|--sexclude <exclude file>] [-us|--unify-sensors <unify file>] [--nosudo]
   [--nothresholds] [--nodcmi] [--noentityabsent]
   [-s <ipmi-sensor output file>] [-h] [-V]
@@ -182,6 +183,11 @@ sub get_help{
        option.
   [--seltail <count>]
        limit SEL output to specified count of last messages
+  [--seldays <days>]
+       limit SEL entries to the last <days> days. This automatically computes
+       the --date-range parameter for ipmi-sel. E.g. --seldays 1 checks only
+       SEL entries from yesterday and today. Can be combined with --selonly.
+       Mutually exclusive with --seloptions '--date-range,...'.
   [-sx|--selexclude <sel exclude file>]
        use a sel exclude file to exclude entries from the system event log.
        Specify name and type pipe delimitered in this file to exclude an entry,
@@ -581,7 +587,7 @@ MAIN: {
 	my @exclude_sel_sensor_types;
 	my $sel_issues_present = 0;
 	my $simulate = '';
-	my ($use_fru, $use_asset, $use_board, $no_sel, $sel_only, $sel_tail, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $s_ufile, $no_entity_absent, $no_dcmi);
+	my ($use_fru, $use_asset, $use_board, $no_sel, $sel_only, $sel_tail, $sel_days, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $s_ufile, $no_entity_absent, $no_dcmi);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -603,6 +609,7 @@ MAIN: {
 		'nosel'				=> \$no_sel,
 		'selonly'			=> \$sel_only,
 		'seltail=s'			=> \$sel_tail,
+		'seldays=i'			=> \$sel_days,
 		'nosudo'			=> \$no_sudo,
 		'nothresholds'			=> \$no_thresholds,
 		'nodcmi'			=> \$no_dcmi,
@@ -679,6 +686,17 @@ MAIN: {
 	@ipmi_exclude_sensor_types = split(/,/, join(',', @ipmi_exclude_sensor_types));
 	@sel_sensor_types = split(/,/, join(',', @sel_sensor_types));
 	@sel_options = split(/,/, join(',', @sel_options));
+	# If --seldays is set, compute --date-range automatically as
+	# "today minus N days" .. "today".
+	if(defined($sel_days)){
+		if(grep(/^--date-range/, @sel_options)){
+			print "Error: --seldays and --seloptions '--date-range,...' are mutually exclusive.\n";
+			exit(3);
+		}
+		my $date_from = strftime("%m/%d/%Y", localtime(time() - $sel_days * 86400));
+		my $date_to   = strftime("%m/%d/%Y", localtime());
+		push @sel_options, '--date-range', "$date_from-$date_to";
+	}
 	@exclude_sel_sensor_types = split(/,/, join(',', @exclude_sel_sensor_types));
 	@ignore_warnings_list = split(/,/, join(',', @ignore_warnings_list));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
