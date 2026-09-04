@@ -58,6 +58,7 @@ check_ipmi_sensor -H <hostname>
   [--selonly] [--seltail <count>] [--seldays <days>] [-sx|--selexclude <sel exclude file>]
   [-xx|--sexclude <exclude file>] [-us|--unify-sensors <unify file>] [--nosudo]
   [--nothresholds] [--nodcmi] [--noentityabsent]
+  [--known-state-file <file>] [--update-known-state]
   [-s <ipmi-sensor output file>] [-h] [-V]
   [-v|-vv|-vvv]
 EOT
@@ -137,6 +138,16 @@ sub get_help{
        state for these. Option can be specified multiple times. The <sensor id>
        is a numeric value (sensor names are not used as some servers have multiple
        sensors with the same name). Use -vvv option to query the <sensor ids>.
+  [--known-state-file <file>]
+       Where to store acknowledged (known) sensor states.
+       Default: A file per <hostname> in \$NAGIOS_PLUGIN_STATE_DIRECTORY or
+       if unset, in /var/tmp.
+  [--update-known-state]
+       Store the current non-OK sensor states into the known-state file and
+       report OK.  In future runs, any sensor whose id and state matches an
+       entry stored in this file no longer causes a WARNING or CRITICAL exit,
+       but it is still listed in the output (marked "(acknowledged)") whenever
+       the overall check is not OK.
   [-v|-vv|-vvv]
        be verbose
          (no -v) .. single line output
@@ -544,6 +555,43 @@ sub unify_with_file{
 	return $name;
 }
 
+# Reads a previously stored known-state file (written by --update-known-state).
+# @return a hash of sensor id => acknowledged state
+sub read_known_state{
+	my $file_name = shift;
+	my %known;
+	return %known unless $file_name && -e $file_name;
+	if(!(open (FH, "< $file_name"))){
+		print "-> Reading known state file $file_name failed with: $!.\n";
+		exit(3);
+	}
+	while(my $line = <FH>){
+		chomp $line;
+		next if $line eq '';
+		my ($id, $state) = split(/\|/, $line);
+		next unless defined $id && defined $state && $id ne '';
+		$known{$id} = $state;
+	}
+	close FH;
+	return %known;
+}
+
+# Writes the currently reported non-OK sensor states to the known-state file,
+# so that a later run can compare against them (see read_known_state).
+sub write_known_state{
+	my $file_name = shift;
+	my $current_bad_state = shift; # hashref: id => [ state, name ]
+	if(!(open (FH, "> $file_name"))){
+		print "-> Writing known state file $file_name failed with: $!.\n";
+		exit(3);
+	}
+	foreach my $id (sort keys %{$current_bad_state}){
+		my ($state, $name) = @{$current_bad_state->{$id}};
+		print FH "$id|$state|$name\n";
+	}
+	close FH;
+}
+
 #define entire hashes
 our %hdrmap = (
 	'Record_ID'		=> 'id',	# FreeIPMI ...,0.7.x
@@ -588,6 +636,7 @@ MAIN: {
 	my $sel_issues_present = 0;
 	my $simulate = '';
 	my ($use_fru, $use_asset, $use_board, $no_sel, $sel_only, $sel_tail, $sel_days, $no_sudo, $use_thresholds, $no_thresholds, $sel_xfile, $s_xfile, $s_ufile, $no_entity_absent, $no_dcmi);
+	my ($known_state_file, $update_known);
 
 	#read in command line arguments and init hash variables with the given values from argv
 	if ( !( GetOptions(
@@ -623,6 +672,8 @@ MAIN: {
 		'xx|sexclude=s'		=> \$s_xfile,
 		'us|unify-sensors=s'=> \$s_ufile,
 		'i|include=s'		=> \@ipmi_ilist,
+		'known-state-file=s'	=> \$known_state_file,
+		'update-known-state'	=> \$update_known,
 		'o|outformat=s'		=> \$ipmi_outformat,
 		'fc|fancount=i'		=> \$fan_count,
 		'D=s'				=> \$lanVersion,
@@ -701,6 +752,15 @@ MAIN: {
 	@ignore_warnings_list = split(/,/, join(',', @ignore_warnings_list));
 	@ipmi_xlist = split(/,/, join(',', @ipmi_xlist));
 	@ipmi_ilist = split(/,/, join(',', @ipmi_ilist));
+
+	# One file per monitored host, since the same install can check many.
+	if(!defined($known_state_file)){
+		my $known_state_dir = $ENV{'NAGIOS_PLUGIN_STATE_DIRECTORY'} || '/var/tmp';
+		my $known_state_host = defined($ipmi_host) ? $ipmi_host : 'localhost';
+		$known_state_host =~ s/[^A-Za-z0-9._-]/_/g;
+		$known_state_file = "$known_state_dir/check_ipmi_sensor_$known_state_host.state";
+	}
+	my %known_state = read_known_state($known_state_file);
 
 	#check for zenoss output
 	if(defined $ipmi_outformat && $ipmi_outformat eq "zenoss"){
@@ -906,6 +966,7 @@ MAIN: {
 		my $perf = '';#performance sensor
 		my $curr_fans = 0;
 		my @ipmioutput2;#filtered original ipmi output
+		my %current_bad_state;#id => [ state, name ] for currently non-OK sensors
 
 		#skip ipmi output, if only SEL queried
 		if (!$sel_only){
@@ -979,11 +1040,14 @@ MAIN: {
 				}
 				#check for warning sensors
 				if($check_sensor_state && ($row->{'state'} ne 'Nominal' && $row->{'state'} ne 'N/A')){
-					$exit = 1 if $exit < 1 && !exists $ignore_warnings_list{$row->{'id'}};
-					$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning';
+					$current_bad_state{$row->{'id'}} = [ $row->{'state'}, $row->{'name'} ];
+					my $acknowledged = exists $known_state{$row->{'id'}} && $known_state{$row->{'id'}} eq $row->{'state'};
+					$exit = 1 if $exit < 1 && !exists $ignore_warnings_list{$row->{'id'}} && !$acknowledged;
+					$exit = 2 if $exit < 2 && $row->{'state'} ne 'Warning' && !$acknowledged;
 					#don't insert a , the first time
 					$w_sensors .= ", " unless $w_sensors eq '';
 					$w_sensors .= "$row->{'name'} = $row->{'state'}" unless exists $ignore_warnings_list{$row->{'id'}};
+					$w_sensors .= " (acknowledged)" if $acknowledged;
 					if( $verbosity ){
 						if( $row->{'reading'} ne 'N/A'){
 							$w_sensors .= " ($row->{'reading'})" ;
@@ -1129,6 +1193,12 @@ MAIN: {
 				$power_perf = "\'$power_key\'=" . $dcmioutput->{'Current Power'};
 			}
 			$perf = $power_perf . ' ' . $perf;
+		}
+		if($update_known){
+			write_known_state($known_state_file, \%current_bad_state);
+			my $stored = scalar keys %current_bad_state;
+			print "OK (known state updated, $stored condition(s) stored)\n";
+			exit(0);
 		}
 		$perf = substr($perf, 0, -1);#cut off the last chars
 		if ( $exit == 0 ){

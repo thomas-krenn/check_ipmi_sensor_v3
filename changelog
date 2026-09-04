@@ -2,6 +2,11 @@
 Changelog for check_ipmi_sensor, a Nagios/Icinga plugin to check IPMI sensors
 ################################################################################
 
+Unreleased
+  * Added --known-state-file and --update-known-state to acknowledge
+    currently reported sensor problems without hiding future, different
+    problems
+
 Version 3.14 20221102
   * Hide password in plugin output
   * #31 Pass options to ipmi-sel
